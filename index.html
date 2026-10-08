@@ -774,8 +774,9 @@ function introKey(e){if(!IN)return;const k=e.key;
 }
 // Szenen: 0 Gasse, 1 Estrich (wartet), 2 Buch, 3 Weltkarte, 4 Logbuchseite (wartet)
 const IN_LEN=[13,99,5.5,8.5,99];
-function introTick(dt){if(!IN)return;if(IN.ac&&IN.ac.state==='suspended')IN.ac.resume();
-  IN.t+=dt;if(!IN.wait)IN.st+=dt;const s=IN.scene,st=IN.st;
+function introTick(dt){if(!IN)return;try{introTick2(dt);}catch(e){console.error(e);introEnd();}}
+function introTick2(dt){if(IN.ac&&IN.ac.state==='suspended')IN.ac.resume();
+  IN.t+=dt;if(!IN.wait||IN.scene===4)IN.st+=dt;const s=IN.scene,st=IN.st;
   if(s===0){const tx=232;if(IN.px<tx){IN.px+=dt*30;IN.stepAcc=(IN.stepAcc||0)+dt;if(IN.stepAcc>.32){IN.stepAcc=0;inBurst(900,.05,.18);}}
     if(st>IN_LEN[0]){IN.scene=1;IN.st=0;IN.px=40;IN.dir='right';introRain(false);inCreak();setTimeout(inCreak,700);}}
   else if(s===1){if(IN.px<176&&!IN.opened){IN.px+=dt*24;IN.stepAcc=(IN.stepAcc||0)+dt;if(IN.stepAcc>.36){IN.stepAcc=0;inBurst(500,.06,.2);}}
@@ -836,7 +837,7 @@ function introDraw(){const c=wx,s=IN.scene,st=IN.st,t=IN.t;c.imageSmoothingEnabl
     c.fillStyle='rgba(190,215,255,.10)';c.beginPath();c.moveTo(198,58);c.lineTo(220,58);c.lineTo(214,150);c.lineTo(150,150);c.fill();
     c.fillStyle='rgba(255,240,210,.7)';IN.dust.forEach(d=>{d.p+=1/60;const x=d.x+Math.sin(d.p)*4,y=d.y+((t*d.v)%120);c.fillRect(x|0,(30+(y-30)%120)|0,1,1);});
     const op=!!IN.opened;inChest(c,180,126,op);
-    if(op){const g=Math.min(1,(t-IN.opened)/1.2);c.fillStyle='rgba(255,215,120,'+(.35*g)+')';c.beginPath();c.arc(195,118,30*g,0,7);c.fill();}
+    if(op){const g=Math.min(1,(t-IN.opened)/1.2);c.fillStyle='rgba(255,215,120,'+(.35*g)+')';c.beginPath();c.arc(195,118,Math.max(0.1,30*g),0,7);c.fill();}
     c.drawImage(sprite(plook(),IN.dir,IN.px<176&&!op?((t*4|0)%2):0),Math.round(IN.px),112);
     if(st<1){c.fillStyle='rgba(0,0,0,'+(1-st)+')';c.fillRect(0,0,VW,VH);}
   }
@@ -852,7 +853,8 @@ function inBook(cx,cy,w,h,openF){const L='#5A3A22',G2='#C99A3A';
   ux.strokeStyle=G2;ux.lineWidth=.8;ux.strokeRect(cx-w/2+3,cy-h/2+3,w-6,h-6);
   if(openF<.2){ux.textAlign='center';ux.fillStyle='#E8C36E';ux.font='700 13px '+DISP;ux.fillText('Logbuch',cx,cy+4);ux.textAlign='left';}
   else{ux.fillStyle='rgba(90,58,34,.25)';ux.fillRect(cx-.5,cy-h/2+3,1,h-6);}}
-function drawIntroUI(){if(!IN)return;const s=IN.scene,st=IN.st,t=IN.t;ux.textBaseline='alphabetic';
+function drawIntroUI(){if(!IN)return;try{drawIntroUI2();}catch(e){console.error(e);introEnd();}}
+function drawIntroUI2(){const s=IN.scene,st=IN.st,t=IN.t;ux.textBaseline='alphabetic';
   if(s===0){if(st>1.2&&st<6.2)inSub(['Basel, heute. Ein Abend im Herbst.'],160);if(st>6.4&&st<12.2)inSub(['Deine Grossmutter hat angerufen:','«Im Estrich liegt etwas, das dir gehören soll.»'],152);}
   if(s===1){if(IN.wait){inSub(['Eine alte Truhe. Sie ist nicht verschlossen.'],150);const b=(t*2|0)%2;ux.textAlign='center';font(7,true);ux.fillStyle=b?'#E8C36E':'#FFF6DA';ux.fillText('Leertaste: Truhe öffnen',VW/2,172);ux.textAlign='left';}
     else if(IN.opened)inSub(['Darin liegt ein Buch aus Leder.'],150);}
@@ -866,7 +868,7 @@ function drawIntroUI(){if(!IN)return;const s=IN.scene,st=IN.st,t=IN.t;ux.textBas
     font(6,true);const labs=IN_ORTE.map((o,i)=>(i+1)+' '+o[0]);const rowW=r=>labs.slice(r?5:0,r?9:5).reduce((a,l)=>a+ux.measureText(l).width+8,0)-8;let lx=(VW-rowW(0))/2,ly=150;
     IN_ORTE.forEach(([n,x,y],i)=>{const p=(st-.8-i*.6);const lw=ux.measureText(labs[i]).width;
       if(p>=0){const px=mx+(x*2+1)*sc,py=my+(y*2+1)*sc,b=Math.min(1,p/.4);
-        ux.fillStyle='rgba(242,193,78,'+(.35*b)+')';ux.beginPath();ux.arc(px,py,5*b+Math.sin(t*4+i)*1,0,7);ux.fill();
+        ux.fillStyle='rgba(242,193,78,'+(.35*b)+')';ux.beginPath();ux.arc(px,py,Math.max(0.1,5*b+Math.sin(t*4+i)),0,7);ux.fill();
         ux.fillStyle='#F2C14E';ux.fillRect(px-1.5,py-1.5,3,3);
         ux.fillStyle=p<.6?'#FFFFFF':'#F2C14E';ux.fillText(labs[i],lx,ly);}
       else{ux.fillStyle='rgba(255,246,218,.25)';ux.fillText(labs[i],lx,ly);}
