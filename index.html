@@ -293,7 +293,7 @@ function inputChar(e){const c=dlg.cur;if(e.key==='Enter'){const ok=[].concat(c.s
 let mini=null;
 function miniStart(s){if(s.game==='sail'){sailStart(s);return;}if(s.game==='load'){loadStart(s);return;}if(s.game==='simon'){simonStart(s);return;}if(s.game==='memo'){memoStart(s);return;}if(s.game==='beat'){beatStart(s);return;}if(s.game==='lr'){lrStart(s);return;}if(s.game==='route'){routeStart(s);return;}if(s.game==='run'){runStart(s);return;}const order=s.pieces.map((p,i)=>i);for(let i=order.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;const t=order[i];order[i]=order[j];order[j]=t;}
   mini={s:s,order:order,k:0,sel:0,left:s.time,done:{},flash:0,state:'intro',used:0};mode='mini';}
-function miniUpdate(dt){if(mini&&mini.game==='run'){mini.t+=dt;return;}if(mini&&mini.game==='sail'){sailUpdate(dt);return;}if(mini&&mini.game==='load'){loadUpdate(dt);return;}if(mini&&mini.game==='simon'){simonUpdate(dt);return;}if(mini&&mini.game==='memo'){memoUpdate(dt);return;}if(mini&&mini.game==='beat'){beatUpdate(dt);return;}if(mini&&mini.game==='lr'){lrUpdate(dt);return;}if(mini&&mini.game==='route'){routeUpdate(dt);return;}if(!mini||mini.state!=='run')return;mini.left-=dt;mini.used+=dt;if(mini.flash>0)mini.flash-=dt;if(mini.left<=0){mini.left=0;mini.state='lost';}}
+function miniUpdate(dt){if(mini&&mini.game==='run'){mini.t+=dt;return;}if(mini&&mini.game==='sail'){sailUpdate(dt);return;}if(mini&&mini.game==='load'){loadUpdate(dt);return;}if(mini&&mini.game==='simon'){simonUpdate(dt);return;}if(mini&&mini.game==='memo'){memoUpdate(dt);return;}if(mini&&mini.game==='beat'){beatUpdate(dt);return;}if(mini&&mini.game==='lr'){lrUpdate(dt);return;}if(mini&&mini.game==='route'){routeUpdate(dt);return;}if(!mini||mini.state!=='run')return;mini.left-=dt;mini.used+=dt;if(mini.flash>0)mini.flash-=dt;if(mini.left<=0){mini.left=0;mini.state='lost';mini.endAt=now;}}
 function miniMove(k){const P0=mini.s.pieces,a=P0[mini.sel];let best=-1,bd=1e9;
   P0.forEach((b,i)=>{if(i===mini.sel)return;const dx=b.x-a.x,dy=b.y-a.y;let ok=false;
     if(k==='left')ok=dx<-4;else if(k==='right')ok=dx>4;else if(k==='up')ok=dy<-4;else ok=dy>4;
@@ -302,9 +302,9 @@ function miniMove(k){const P0=mini.s.pieces,a=P0[mini.sel];let best=-1,bd=1e9;
 function miniKey(k){const m=mini,s=m.s;if(m.game==='sail'){sailKey(k);return;}if(m.game==='load'){loadKey(k);return;}if(m.game==='simon'){simonKey(k);return;}if(m.game==='memo'){memoKey(k);return;}if(m.game==='beat'){beatKey(k);return;}if(m.game==='lr'){lrKey(k);return;}if(m.game==='route'){routeKey(k);return;}if(m.game==='run'){runKey(k);return;}
   if(m.state==='intro'){if(k==='ok'||k==='space')m.state='run';else if(k==='menu')miniEnd(null);return;}
   if(m.state==='run'){if(k==='up'||k==='down'||k==='left'||k==='right')miniMove(k);
-    else if(k==='ok'||k==='space'){const want=m.order[m.k];if(m.sel===want&&!m.done[want]){m.done[want]=1;m.k++;if(m.k>=m.order.length)m.state='won';}else{m.left=Math.max(0,m.left-s.penalty);m.flash=.4;}}
+    else if(k==='ok'||k==='space'){const want=m.order[m.k];if(m.sel===want&&!m.done[want]){m.done[want]=1;m.k++;if(m.k>=m.order.length){m.state='won';m.endAt=now;}}else{m.left=Math.max(0,m.left-s.penalty);m.flash=.4;}}
     else if(k==='menu')miniEnd(null);return;}
-  if(k==='ok'||k==='space')miniEnd(m.state==='won');}
+  if((k==='ok'||k==='space')&&now-(m.endAt||0)>1500)miniEnd(m.state==='won');}
 function miniEnd(won){const m=mini,s=m.s;mini=null;mode='dialog';
   if(won){const sail=m.reward!=null,reward=sail?m.reward:s.base+Math.floor(m.left/2),prev=(G.best[s.id]&&G.best[s.id].r)||0,t=sail?m.d2:Math.round(m.used*10)/10;
     const bt=G.best[s.id]&&G.best[s.id].t;G.best[s.id]={r:Math.max(prev,reward),t:bt?(sail?Math.max(bt,t):Math.min(bt,t)):t};
@@ -350,7 +350,7 @@ function sailUpdate(dt){const m=mini,s=m.s;m.t+=dt;if(m.state!=='run')return;
   if(m.leg===1&&m.dist>=s.near){m.p1=Math.max(0,m.prov);m.t=0;if(s.single){m.d2=Math.round(m.p1);m.reward=s.base+Math.floor(m.p1/4);m.state='won';}else m.state='mid';}
   else if(m.prov<=0||m.dist>=s.far){m.prov=Math.max(0,m.prov);m.t=0;if(m.leg===1)m.state='lost';else{m.d2=Math.min(m.dist,s.far);m.reward=s.base+Math.floor(m.p1/10)+Math.floor(m.d2/s.per);m.state='won';}}}
 function sailKey(k){const m=mini;if(k==='menu'){miniEnd(null);return;}
-  if(k!=='ok'&&k!=='space')return;if(m.state==='intro')sailLeg(m,1);else if(m.state==='mid'){if(m.t>.7)sailLeg(m,2);}else if(m.state!=='run'&&m.t>.7)miniEnd(m.state==='won');}
+  if(k!=='ok'&&k!=='space')return;if(m.state==='intro')sailLeg(m,1);else if(m.state==='mid'){if(m.t>1.5)sailLeg(m,2);}else if(m.state!=='run'&&m.t>1.5)miniEnd(m.state==='won');}
 function drawShip(x,y,t){const b=Math.sin(t*5)*1;y+=b;ux.fillStyle='#5A3B22';ux.beginPath();ux.moveTo(x-9,y+2);ux.lineTo(x+9,y+2);ux.lineTo(x+7,y+6);ux.lineTo(x-6,y+6);ux.closePath();ux.fill();
   ux.fillRect(x+5,y-1,4,3);ux.fillStyle='#2B1C10';ux.fillRect(x-1,y-9,1,11);ux.fillRect(x+5,y-6,1,8);
   ux.fillStyle='#FFFDF5';ux.beginPath();ux.moveTo(x-1,y-9);ux.lineTo(x-8,y-4);ux.lineTo(x-1,y);ux.closePath();ux.fill();ux.beginPath();ux.moveTo(x+5,y-6);ux.lineTo(x,y-2.5);ux.lineTo(x+5,y);ux.closePath();ux.fill();
@@ -399,8 +399,8 @@ function loadEvent(m,d){const g=m.g;let e=null;
   else if(d===19)e=['«Land! Land!»','Es war nur eine Wolkenbank am Horizont. Die Enttäuschung ist gross.',1];
   else if(d===24&&g.wasser>0)e=['Ein Wasserfass ist faulig.','Das Wasser stinkt und ist voller Würmer. Ein Fass geht über Bord.',0];
   else if(d===32)e=(g.brot>0&&g.fleisch>0)?['Die Mannschaft will umkehren.','Aber das Essen ist noch abwechslungsreich. Du überredest sie: noch drei Tage.',1]:['Die Mannschaft will umkehren.','Seit Wochen immer dasselbe Essen. Die Stimmung ist am Boden.',0];
-  if(!e)return;if(d===3&&!e[2])m.need+=6;if(d===16)m.need+=3;if(d===24)m.drink-=8;if(d===32&&!e[2])m.mood=false;m.ban=e;m.banT=2.6;}
-function loadUpdate(dt){const m=mini;m.t+=dt;if(m.state!=='sail')return;if(m.ban){m.banT-=dt;if(m.banT<=0)m.ban=null;return;}
+  if(!e)return;if(d===3&&!e[2])m.need+=6;if(d===16)m.need+=3;if(d===24)m.drink-=8;if(d===32&&!e[2])m.mood=false;m.ban=e;m.banT=0;}
+function loadUpdate(dt){const m=mini;m.t+=dt;if(m.state!=='sail')return;if(m.ban){m.banT+=dt;return;}
   m.acc+=dt;while(m.acc>=.28&&m.state==='sail'&&!m.ban){m.acc-=.28;m.day++;
     if(m.day>m.drink){m.why='Am Tag '+m.day+' ist das letzte Fass leer. Ohne Trinken überlebt niemand: Ihr müsst umkehren.';m.state='lost';m.t=0;}
     else if(m.day>m.food){m.why='Am Tag '+m.day+' ist das Essen aufgebraucht. Die Mannschaft zwingt dich zur Umkehr.';m.state='lost';m.t=0;}
@@ -411,8 +411,8 @@ function loadKey(k){const m=mini,s=m.s;if(k==='menu'){miniEnd(null);return;}cons
   if(m.state==='pick'){const n=s.goods.length;if(k==='up')m.sel=(m.sel+n-1)%n;else if(k==='down')m.sel=(m.sel+1)%n;
     else if(k==='left'){if(m.n[m.sel]>0)m.n[m.sel]--;}else if(k==='right'){if(loadSum(m)<s.slots)m.n[m.sel]++;}
     else if(go&&loadSum(m)>0)loadGo(m);return;}
-  if(m.state==='sail'){if(go&&m.ban)m.banT=0;return;}
-  if(go&&m.t>.7)miniEnd(m.state==='won');}
+  if(m.state==='sail'){if(go&&m.ban&&m.banT>1.5){m.ban=null;m.acc=0;}return;}
+  if(go&&m.t>1.5)miniEnd(m.state==='won');}
 function drawLoad(){const m=mini,s=m.s;ux.textBaseline='alphabetic';shade(.55);box(10,10,300,160,PAPER);fontD(11);ux.fillStyle=INK;ux.fillText(s.title,20,27);
   const ov=(h)=>{ux.fillStyle='rgba(255,253,245,.96)';ux.fillRect(40,92-h/2,240,h);ux.strokeStyle=INK;ux.lineWidth=1;ux.strokeRect(40,92-h/2,240,h);};
   if(m.state==='intro'||m.state==='pick'){const used=loadSum(m);
@@ -433,7 +433,7 @@ function drawLoad(){const m=mini,s=m.s;ux.textBaseline='alphabetic';shade(.55);b
   const bar=(x,lab,v,col)=>{font(5.5,false);ux.fillStyle=MUTE;ux.fillText(lab,x,36);const w=78,f=Math.max(0,Math.min(1,v/48));ux.fillStyle='#E3DCC8';ux.fillRect(x+30,31,w,6);ux.fillStyle=v<6?'#C0392B':col;ux.fillRect(x+30,31,w*f,6);ux.strokeStyle=INK;ux.lineWidth=.7;ux.strokeRect(x+30,31,w,6);};
   bar(20,'Trinken',m.drink-m.day,'#5FA5DA');bar(140,'Essen',m.food-m.day,'#B5523A');
   font(6,false);ux.fillStyle=MUTE;ux.fillText('Von den Kanarischen Inseln nach Westen. Niemand an Bord weiss, wie weit es noch ist.',20,152);
-  if(m.ban){ov(44);ux.textAlign='center';font(9,true);ux.fillStyle=m.ban[2]?INK:RED;ux.fillText('Tag '+m.day+': '+m.ban[0],160,84);ux.textAlign='left';font(6.6,false);ux.fillStyle=INK;text(m.ban[1],48,95,224,9);return;}
+  if(m.ban){ov(44);ux.textAlign='center';font(9,true);ux.fillStyle=m.ban[2]?INK:RED;ux.fillText('Tag '+m.day+': '+m.ban[0],160,84);ux.textAlign='left';font(6.6,false);ux.fillStyle=INK;text(m.ban[1],48,95,224,9);if(m.banT>1.5&&((now/400|0)%2)){ux.textAlign='center';font(6.5,true);ux.fillStyle=RED;ux.fillText('Leertaste: weiter',160,112);ux.textAlign='left';}return;}
   if(m.state==='lost'){ov(56);ux.textAlign='center';font(10,true);ux.fillStyle=RED;ux.fillText('Umkehr!',160,78);ux.textAlign='left';font(6.8,false);ux.fillStyle=INK;text(m.why,48,90,224,9.5);ux.textAlign='center';font(6,false);ux.fillStyle=MUTE;ux.fillText('Leertaste: weiter',160,115);ux.textAlign='left';return;}
   if(m.state==='won'){ov(84);ux.textAlign='center';font(10,true);ux.fillStyle=INK;ux.fillText('Tag '+m.day+': Land in Sicht!',160,64);
     font(6.6,false);ux.fillText(m.g.tausch>0?'Du hast Waren zum Tauschen dabei: Das zahlt sich aus.':'Du hast nichts zum Tauschen dabei. Schade.',160,75);ux.textAlign='left';text(s.outro,48,86,224,9);
@@ -446,7 +446,7 @@ function raceUpdate(dt){const m=race;m.left-=dt;m.used+=dt;if(m.left<=0){m.left=
 function raceStop(st){const m=race;race=null;keys.up=keys.down=keys.left=keys.right=false;mini=m;m.state=st;m.t=0;mode='mini';}
 function raceArrive(){const m=race,s=m.s;s.points.forEach((p,i)=>{if(m.got[i])return;if(s.ordered&&i!==m.k)return;if(Math.abs(p.x-G.x)+Math.abs(p.y-G.y)<=(p.r==null?1:p.r)){m.got[i]=1;m.k++;toast(p.label||('Punkt '+m.k));}});if(m.k>=s.points.length)raceStop('won');}
 function runKey(k){const m=mini;if(k==='menu'){miniEnd(null);return;}if(k!=='ok'&&k!=='space')return;
-  if(m.state==='intro'){race=m;mini=null;m.state='run';mode='play';raceArrive();}else if(m.t>.6)miniEnd(m.state==='won');}
+  if(m.state==='intro'){race=m;mini=null;m.state='run';mode='play';raceArrive();}else if(m.t>1.5)miniEnd(m.state==='won');}
 function drawRaceWorld(cam){const m=race;if(!m)return;m.s.points.forEach((p,i)=>{if(m.got[i])return;const cur=!m.s.ordered||i===m.k,b=cur?((now/250|0)%2):0,x=p.x*T-cam.x+4,y=p.y*T-cam.y-4-b;
   wx.globalAlpha=cur?1:.45;R(wx,x-1,y-1,10,10,INK);R(wx,x,y,8,8,GOLD);R(wx,x+2,y+2,4,4,'#FFE9A8');wx.globalAlpha=1;});}
 function drawRaceHUD(){const m=race;if(!m)return;const s=m.s,w=120,x=(VW-w)/2,fr=m.left/s.time;chip(x-4,150,w+8,24,PAPER,INK);font(6,true);ux.fillStyle=INK;ux.textBaseline='alphabetic';
@@ -472,7 +472,7 @@ function routeUpdate(dt){const m=mini,s=m.s;m.t+=dt;if(m.state!=='run')return;m.
   m.acc+=dt;if(m.acc>.12&&(dx||dy)){m.acc=0;m.trail.push(m.x,m.y);}
   const b=WSTOP[s.stops[m.k]],bx=b[0]*WC+1,by=b[1]*WC+1;if(Math.abs(bx-m.x)<5&&Math.abs(by-m.y)<5){m.k++;if(m.k>=s.stops.length){m.state='won';m.t=0;return;}}
   if(m.left<=0){m.left=0;m.state='lost';m.t=0;}}
-function routeKey(k){const m=mini;if(k==='menu'){miniEnd(null);return;}if(k!=='ok'&&k!=='space')return;if(m.state==='intro')m.state='run';else if(m.state!=='run'&&m.t>.6)miniEnd(m.state==='won');}
+function routeKey(k){const m=mini;if(k==='menu'){miniEnd(null);return;}if(k!=='ok'&&k!=='space')return;if(m.state==='intro')m.state='run';else if(m.state!=='run'&&m.t>1.5)miniEnd(m.state==='won');}
 function drawRoute(){const m=mini,s=m.s;ux.textBaseline='alphabetic';shade(.55);box(10,10,300,160,PAPER);fontD(11);ux.fillStyle=INK;ux.fillText(s.title,20,27);
   const tw=70,tx=230,fr=m.left/s.time;ux.fillStyle='#E3DCC8';ux.fillRect(tx,19,tw,8);ux.fillStyle=fr>.3?'#3F7A4A':'#C0392B';ux.fillRect(tx,19,tw*fr,8);ux.strokeStyle=INK;ux.lineWidth=.8;ux.strokeRect(tx,19,tw,8);
   font(6,true);ux.fillStyle=RED;const nx=s.stops[Math.min(m.k,s.stops.length-1)];ux.fillText('Nächstes Ziel: '+nx,20,35);
@@ -494,13 +494,13 @@ function lrUpdate(dt){const m=mini;m.t+=dt;if(m.fl>0)m.fl-=dt;if(m.state!=='run'
 function lrKey(k){const m=mini,s=m.s;if(k==='menu'){miniEnd(null);return;}
   if(m.state==='intro'){if(k==='ok'||k==='space')m.state='run';return;}
   if(m.state==='run'){if(k!=='left'&&k!=='right')return;const it=s.items[m.order[m.k]],good=(k==='left')===(it.side==='l');m.last={it:it,good:good};m.fl=.9;if(good)m.ok++;else m.left=Math.max(0,m.left-s.penalty);m.k++;if(m.k>=m.order.length){m.state='won';m.t=0;}return;}
-  if((k==='ok'||k==='space')&&m.t>.6)miniEnd(m.state==='won');}
+  if((k==='ok'||k==='space')&&m.t>1.5)miniEnd(m.state==='won');}
 function drawLR(){const m=mini,s=m.s;ux.textBaseline='alphabetic';shade(.55);box(10,10,300,160,PAPER);fontD(11);ux.fillStyle=INK;ux.fillText(s.title,20,27);
   const tw=80,tx=220,fr=m.left/s.time;ux.fillStyle='#E3DCC8';ux.fillRect(tx,19,tw,8);ux.fillStyle=fr>.3?'#3F7A4A':'#C0392B';ux.fillRect(tx,19,tw*fr,8);ux.strokeStyle=INK;ux.lineWidth=.8;ux.strokeRect(tx,19,tw,8);
   const side=(x,lab,col,key)=>{ux.fillStyle=col;ux.fillRect(x,44,92,84);ux.strokeStyle=INK;ux.lineWidth=1;ux.strokeRect(x,44,92,84);ux.fillStyle='#FFFFFF';ux.textAlign='center';font(9,true);ux.fillText(key,x+46,62);ux.textAlign='left';font(6.6,true);text(lab,x+8,78,78,9.5,{color:'#FFFFFF'});};
   side(20,s.left,'#3F7A4A','←');side(208,s.right,'#2364AA','→');
   if(m.state==='run'){const it=s.items[m.order[m.k]];ux.fillStyle='#F6EBC9';ux.fillRect(118,66,84,40);ux.strokeStyle=GOLD;ux.lineWidth=1.5;ux.strokeRect(118,66,84,40);ux.textAlign='center';font(it.name.length>11?7.4:9.5,true);ux.fillStyle=INK;ux.fillText(it.name,160,89);font(5.6,false);ux.fillStyle=MUTE;ux.fillText((m.k+1)+' von '+m.order.length,160,100);ux.textAlign='left';}
-  if(m.last&&m.fl>0){ux.textAlign='center';font(6.6,true);ux.fillStyle=m.last.good?'#3F7A4A':RED;ux.fillText((m.last.good?'Richtig: ':'Falsch: ')+m.last.it.name+' → '+(m.last.it.side==='l'?s.lshort:s.rshort),160,138);ux.textAlign='left';}
+  if(m.last&&(m.fl>0||m.state==='run')){ux.textAlign='center';font(6.6,true);ux.fillStyle=m.last.good?'#3F7A4A':RED;ux.fillText((m.last.good?'Richtig: ':'Falsch: ')+m.last.it.name+' → '+(m.last.it.side==='l'?s.lshort:s.rshort),160,138);ux.textAlign='left';}
   font(6,false);ux.fillStyle=MUTE;if(m.state==='run'){ux.fillText('Pfeil links oder rechts · falsch kostet '+s.penalty+' Sekunden',20,156);const b=G.best[s.id];if(b)ux.fillText('Deine Bestzeit: '+b.t.toFixed(1).replace('.',',')+' s',20,164);return;}
   const ov=(h)=>{ux.fillStyle='rgba(255,253,245,.96)';ux.fillRect(40,92-h/2,240,h);ux.strokeStyle=INK;ux.lineWidth=1;ux.strokeRect(40,92-h/2,240,h);};
   if(m.state==='intro'){ov(60);font(6.8,false);ux.fillStyle=INK;text(s.intro,48,76,224,9.5);ux.textAlign='center';font(8,true);ux.fillText('Leertaste: Start',160,112);ux.textAlign='left';return;}
@@ -519,7 +519,7 @@ function beatKey(k){const m=mini;if(k==='menu'){miniEnd(null);return;}
   if(m.state==='intro'){if(k==='ok'||k==='space')m.state='run';return;}
   if(m.state==='run'){const l=BK.indexOf(k);if(l<0)return;m.fl[l]=.15;let bi=-1,bd=.2;m.notes.forEach((n,i)=>{if(n.st||n.l!==l)return;const d=Math.abs(n.t-m.now);if(d<bd){bd=d;bi=i;}});
     if(bi>=0){m.notes[bi].st=1;m.hits++;m.combo++;m.best=Math.max(m.best,m.combo);}else m.combo=0;return;}
-  if((k==='ok'||k==='space')&&m.t>.7)miniEnd(m.state==='won');}
+  if((k==='ok'||k==='space')&&m.t>1.5)miniEnd(m.state==='won');}
 function drawBeat(){const m=mini,s=m.s;ux.textBaseline='alphabetic';shade(.55);box(10,10,300,160,PAPER);fontD(11);ux.fillStyle=INK;ux.fillText(s.title,20,27);
   const X0=92,CW=34,TOP=34,HIT=132;ux.fillStyle='#2B1C10';ux.fillRect(X0-4,TOP,CW*4+8,112);
   for(let i=0;i<4;i++){const x=X0+i*CW;ux.fillStyle=i%2?'#3D2A1A':'#35241A';ux.fillRect(x,TOP,CW,112);
@@ -542,8 +542,8 @@ function memoKey(k){const m=mini,n=m.cards.length,C=m.cols;if(k==='menu'){miniEn
   if(m.state==='intro'){if(k==='ok'||k==='space')m.state='run';return;}
   if(m.state==='run'){if(k==='left')m.sel=(m.sel+n-1)%n;else if(k==='right')m.sel=(m.sel+1)%n;else if(k==='up'){if(m.sel-C>=0)m.sel-=C;}else if(k==='down'){if(m.sel+C<n)m.sel+=C;}
     else if(k==='ok'||k==='space'){if(m.wait>0){m.wait=0;m.open=[];}const c=m.cards[m.sel];if(m.done[c.p]||m.open.indexOf(m.sel)>=0)return;m.open.push(m.sel);
-      if(m.open.length===2){m.tries++;const a=m.cards[m.open[0]],b=m.cards[m.open[1]];if(a.p===b.p){m.done[a.p]=1;m.open=[];if(Object.keys(m.done).length>=m.s.pairs.length){m.state='won';m.t=0;}}else m.wait=1.1;}}return;}
-  if((k==='ok'||k==='space')&&m.t>.6)miniEnd(m.state==='won');}
+      if(m.open.length===2){m.tries++;const a=m.cards[m.open[0]],b=m.cards[m.open[1]];if(a.p===b.p){m.done[a.p]=1;m.open=[];if(Object.keys(m.done).length>=m.s.pairs.length){m.state='won';m.t=0;}}else m.wait=2.6;}}return;}
+  if((k==='ok'||k==='space')&&m.t>1.5)miniEnd(m.state==='won');}
 function drawMemo(){const m=mini,s=m.s,C=m.cols,R=Math.ceil(m.cards.length/C);ux.textBaseline='alphabetic';shade(.55);box(10,10,300,160,PAPER);fontD(11);ux.fillStyle=INK;ux.fillText(s.title,20,27);
   const tw=80,tx=220,fr=m.left/s.time;ux.fillStyle='#E3DCC8';ux.fillRect(tx,19,tw,8);ux.fillStyle=fr>.3?'#3F7A4A':'#C0392B';ux.fillRect(tx,19,tw*fr,8);ux.strokeStyle=INK;ux.lineWidth=.8;ux.strokeRect(tx,19,tw,8);
   const W=280/C-4,Hh=(112/R)-4;m.cards.forEach((c,i)=>{const x=20+(i%C)*(W+4),y=34+((i/C)|0)*(Hh+4),up=m.done[c.p]||m.open.indexOf(i)>=0;
@@ -567,7 +567,7 @@ function simonKey(k){const m=mini,s=m.s;if(k==='menu'){miniEnd(null);return;}
   if(m.state==='run'){if(m.phase!=='in')return;const l=BK.indexOf(k);if(l<0)return;m.lit=l;m.fl=.2;
     if(l===m.seq[m.i]){m.i++;if(m.i>=m.seq.length){if(m.len>=s.max){m.d2=m.len;m.reward=s.base+m.lives*4+m.len;m.state='won';m.t=0;}else{m.len++;simonNew(m);}}}
     else{m.lives--;m.bad=.6;if(m.lives<=0){m.d2=m.len-1;m.state='lost';m.t=0;}else{m.phase='show';m.i=0;m.pt=-.9;}}return;}
-  if((k==='ok'||k==='space')&&m.t>.7)miniEnd(m.state==='won');}
+  if((k==='ok'||k==='space')&&m.t>1.5)miniEnd(m.state==='won');}
 function drawSimon(){const m=mini,s=m.s;ux.textBaseline='alphabetic';shade(.55);box(10,10,300,160,PAPER);fontD(11);ux.fillStyle=INK;ux.fillText(s.title,20,27);
   font(6.5,true);ux.fillStyle=INK;ux.fillText('Länge der Botschaft: '+m.len+' von '+s.max,196,22);ux.fillText('Versuche: '+'● '.repeat(Math.max(0,m.lives))+'○ '.repeat(3-Math.max(0,m.lives)),196,31);
   ux.fillStyle='#8A5A32';ux.fillRect(40,44,240,4);const lit=(m.fl>0||m.phase==='show')?m.lit:-1;
@@ -902,25 +902,40 @@ function drawIntroUI3(){const s=IN.scene,st=IN.st,t=IN.t;ux.textBaseline='alphab
 const RS_ORT={1:['Lissabon',67,14,1490],2:['Nürnberg',72,10,1492],3:['Palos',69,15,1492],4:['Sevilla',70,15,1522],5:['Guanahani',42,20,1492],6:['Tenochtitlán',30,22,1519],7:['Cajamarca',39,33,1532],8:['Hispaniola',46,21,1511],9:['Basel',71,11,0]};
 const RS_KAP={1:'Kapitel I · Aufbruch',2:'Kapitel I · Aufbruch',3:'Kapitel I · Aufbruch',4:'Kapitel II · Die grossen Fahrten',5:'Kapitel III · Begegnung und Eroberung',6:'Kapitel III · Begegnung und Eroberung',7:'Kapitel III · Begegnung und Eroberung',8:'Kapitel IV · Die Folgen',9:'Kapitel IV · Die Folgen'};
 const RS_FILM={
- 1:{cap:'Bald darauf segeln portugiesische Schiffe um Afrika herum nach Indien.',sky:[[70,40,70],[230,140,90]],sea:1,ships:[{x0:150,x1:320,y:118,s:1}],city:'lissabon'},
- 2:{cap:'Der Erdapfel von 1492: die Welt, wie man sie kannte. Amerika fehlt.',globe:1},
- 3:{cap:'3. August 1492: Drei Schiffe legen im Hafen von Palos ab.',sky:[[30,40,80],[240,170,120]],sea:1,ships:[{x0:60,x1:250,y:116,s:1},{x0:20,x1:200,y:124,s:.8},{x0:-10,x1:160,y:130,s:.7}],city:'palos'},
- 4:{cap:'September 1522: Von fünf Schiffen kehrt nur eines zurück, die Victoria.',sky:[[90,110,140],[200,190,170]],sea:1,ships:[{x0:330,x1:170,y:120,s:1,torn:1}]},
- 5:{cap:'12. Oktober 1492: Am Horizont tauchen fremde Segel auf.',sky:[[60,90,150],[250,200,140]],sea:1,beach:1,ships:[{x0:250,x1:230,y:104,s:.35},{x0:280,x1:262,y:105,s:.3},{x0:220,x1:205,y:106,s:.3}]},
- 6:{cap:'August 1521: Tenochtitlán ist zerstört. Die Spanier bauen auf den Trümmern ihre Stadt.',sky:[[60,50,60],[160,110,90]],lake:1,smoke:1},
- 7:{cap:'1533: Atahualpa wird getötet. Das Inkareich zerfällt.',sky:[[20,24,50],[90,70,100]],andes:1},
- 8:{cap:'Bis ins 19. Jahrhundert verschleppen Europäer über 12 Millionen Menschen über den Atlantik.',sky:[[10,14,30],[40,50,80]],sea:1,night:1,ships:[{x0:300,x1:120,y:112,s:.8,dark:1}]}
+ 1:{cap:'1498 erreicht Vasco da Gama als erster Europäer auf dem Seeweg um Afrika Indien. Portugal wird reich mit Pfeffer und Zimt.',sky:[[70,40,70],[230,140,90]],sea:1,ships:[{x0:150,x1:320,y:118,s:1}],city:'lissabon'},
+ 2:{cap:'Behaims Erdapfel zeigt die Welt von 1492: Zwischen Europa und Asien liegt nur Meer. Amerika fehlt, und die Erde ist viel zu klein. Genau darauf setzt Kolumbus.',globe:1},
+ 3:{cap:'3. August 1492: Kolumbus legt mit drei Schiffen in Palos ab. Er will nach Westen segeln und so nach Indien kommen. Nach über fünf Wochen auf See sehen die Matrosen Land.',sky:[[30,40,80],[240,170,120]],sea:1,ships:[{x0:60,x1:250,y:116,s:1},{x0:20,x1:200,y:124,s:.8},{x0:-10,x1:160,y:130,s:.7}],city:'palos'},
+ 4:{cap:'September 1522: Von fünf Schiffen kehrt nur die Victoria zurück, mit 18 Männern. Zum ersten Mal hat ein Schiff die ganze Erde umrundet. Die Welt ist viel grösser als gedacht.',sky:[[90,110,140],[200,190,170]],sea:1,ships:[{x0:330,x1:170,y:120,s:1,torn:1}]},
+ 5:{cap:'12. Oktober 1492: Die Taíno sehen fremde Schiffe. Kolumbus nimmt die Insel für Spanien in Besitz und nimmt Menschen mit an Bord. Er glaubt, er sei in Indien.',sky:[[60,90,150],[250,200,140]],sea:1,beach:1,ships:[{x0:250,x1:230,y:104,s:.35},{x0:280,x1:262,y:105,s:.3},{x0:220,x1:205,y:106,s:.3}]},
+ 6:{cap:'August 1521: Nach fast drei Monaten Belagerung ist Tenochtitlán zerstört. Auf den Trümmern bauen die Spanier Mexiko-Stadt. Das Reich der Azteken gibt es nicht mehr.',sky:[[60,50,60],[160,110,90]],lake:1,smoke:1},
+ 7:{cap:'1533: Die Spanier töten Atahualpa, obwohl das Lösegeld bezahlt ist. Sie ziehen nach Cusco und nehmen das Inkareich ein. Gold und Silber fliessen nach Spanien.',sky:[[20,24,50],[90,70,100]],andes:1},
+ 8:{cap:'Bis ins 19. Jahrhundert verschleppen Europäer rund 12 Millionen Menschen aus Afrika über den Atlantik. 1804 befreien sich die Versklavten auf Haiti selbst.',sky:[[10,14,30],[40,50,80]],sea:1,night:1,ships:[{x0:300,x1:120,y:112,s:.8,dark:1}]}
 };
 const RS_TXT={
- 1:['Alle reden vom Weg nach Indien. Aber wie sieht die Welt überhaupt aus? Die nächste Seite führt zu den Kartenmachern nach Nürnberg.','«Gewürze, Gold, Elfenbein, und Menschen. Schon damals.»','Basel, im Mai 1791'],
- 2:['Wer an eine kurze Fahrt nach Westen glaubt, braucht nur noch Schiffe. In Palos liegen sie bereit.','«Im Kontor sagt man, die Welt sei ein einziger grosser Markt.»','Segerhof, 1791'],
- 3:['Diese Seite springt 30 Jahre nach vorn: Was ist aus den grossen Fahrten geworden?','«Jeden Tag kopiere ich Briefe nach Nantes. Es gehe um Stoffe, sagt man mir.»','Segerhof, 1792'],
- 4:['Jetzt zurück zum 12. Oktober 1492. Diesmal stehst du auf der anderen Seite des Meeres.','«Wer hat diese Geschichten aufgeschrieben? Immer nur die, die ankamen.»','Segerhof, 1793'],
- 5:['27 Jahre nach Guanahani landet Hernán Cortés in Mexiko. Dort steht eine Stadt, grösser als jede in Spanien.','«Im Kontor sagt man ‹Neue Welt›. Für die Menschen dort war sie nicht neu.»','Segerhof, 1795'],
- 6:['Elf Jahre später zieht Pizarro nach Süden, hinauf in die Anden.','«Heute ein Brief über ein Schiff namens Intrépide. Ladung: Indiennes für Afrika. Und zurück? Darüber schreibt niemand.»','Segerhof, 1797'],
- 7:['Was wurde aus den Menschen in den eroberten Ländern? Die nächste Seite springt zurück ins Jahr 1511, und dann weit nach vorn.','«Ich habe die Bücher gesehen. Die Schiffe fahren nach Afrika und dann in die Karibik. Mit Menschen an Bord.»','Segerhof, 1801'],
- 8:['Die letzte Seite führt nach Hause: nach Basel, in die Gegenwart.','«Einundzwanzig Schiffe. Bezahlt auch mit Geld aus Basel. Ich schreibe es auf, damit es jemand weiss.»','Basel, 1815']
+ 1:['2 Jahre später','Portugal will um Afrika herum nach Indien. Andere sagen: Nach Westen geht es schneller. Ob das stimmt, hängt davon ab, wie gross die Erde ist. Darum führt die nächste Seite zu den Kartenmachern nach Nürnberg.','«Gewürze, Gold, Elfenbein. Und Menschen. Schon damals.»','Basel, im Mai 1791'],
+ 2:['wenige Monate später','Auf dem Globus liegt Asien gleich hinter dem Meer. Kolumbus glaubt das auch und hat das spanische Königspaar überzeugt. In Palos werden seine Schiffe gerade beladen.','«Im Kontor sagt man, die Welt sei ein einziger grosser Markt.»','Segerhof, 1791'],
+ 3:['Zeitsprung: 30 Jahre vorwärts','Bevor du siehst, wo Kolumbus ankommt, blättert das Logbuch nach vorn: Was haben all die grossen Fahrten nach 30 Jahren gezeigt? In Sevilla kommt gerade ein Schiff zurück, das um die ganze Welt gefahren ist.','«Jeden Tag kopiere ich Briefe nach Nantes. Es gehe um Stoffe, sagt man mir.»','Segerhof, 1792'],
+ 4:['Zeitsprung: 30 Jahre zurück','Jetzt kennst du die grossen Fahrten. Das Logbuch springt zurück zu dem Tag, an dem in Amerika alles begann: 12. Oktober 1492. Diesmal erlebst du ihn von der anderen Seite, als Mensch auf der Insel.','«Wer hat diese Geschichten aufgeschrieben? Immer nur die, die ankamen.»','Segerhof, 1793'],
+ 5:['27 Jahre später','Nach Kolumbus kommen immer mehr Spanier über das Meer. 1519 landet Hernán Cortés in Mexiko. Er hat von einer reichen Stadt mitten in einem See gehört.','«Im Kontor sagt man ‹Neue Welt›. Für die Menschen dort war sie nicht neu.»','Segerhof, 1795'],
+ 6:['11 Jahre später','Nach Mexiko suchen die Eroberer das nächste Goldland. Francisco Pizarro zieht nach Süden, hinauf in die Anden, ins Reich der Inka.','«Heute ein Brief über ein Schiff namens Intrépide. Ladung: bedruckte Stoffe für Afrika. Und zurück? Darüber schreibt niemand.»','Segerhof, 1797'],
+ 7:['Zeitsprung: zurück ins Jahr 1511','Die grossen Reiche sind erobert. Aber was geschieht danach mit den Menschen dort? Die Seite führt nach Hispaniola, in die erste spanische Kolonie, und dann 240 Jahre weiter.','«Ich habe die Bücher gesehen. Die Schiffe fahren nach Afrika und dann in die Karibik. Mit Menschen an Bord.»','Segerhof, 1801'],
+ 8:['zurück in die Gegenwart','Die letzte Seite führt nach Hause, nach Basel. Was hat all das mit uns heute zu tun?','«Einundzwanzig Schiffe. Bezahlt auch mit Geld aus Basel. Ich schreibe es auf, damit es jemand weiss.»','Basel, 1815']
 };
+// Was die SuS auf der abgeschlossenen Seite herausgefunden haben
+const RS_REC={1:['Gewürze aus Asien sind in Europa sehr teuer.','Viele Zwischenhändler verdienen mit.','Portugal sucht einen eigenen Seeweg um Afrika.'],
+ 2:['Gelehrte wissen: Die Erde ist eine Kugel.','Aber man hält sie für viel kleiner.','Amerika kennt in Europa noch niemand.'],
+ 3:['Das spanische Königspaar bezahlt die Fahrt.','Rund 90 Männer und Jungen fahren mit.','Sie fürchten Hunger und Durst, nicht den «Rand der Erde».'],
+ 4:['Portugal fährt nach Osten, Spanien nach Westen.','1494 teilen beide die Welt unter sich auf.','Die Menschen dort fragt niemand.'],
+ 5:['Kolumbus glaubt, er sei in Indien.','Er nimmt die Insel für Spanien in Besitz.','Die Sicht der Taíno kennen wir kaum.'],
+ 6:['Cortés siegt mit Zehntausenden einheimischen Verbündeten.','Die Pocken töten sehr viele Menschen.','Das Reich der Azteken zerbricht.'],
+ 7:['Seuche und Bürgerkrieg schwächen die Inka.','Pizarro nimmt Atahualpa gefangen und will Gold.','Trotz Lösegeld wird Atahualpa getötet.'],
+ 8:['Die meisten Taíno sterben an Gewalt, Zwangsarbeit und Krankheit.','Danach werden Millionen Menschen aus Afrika versklavt.','Zucker und Geld fliessen nach Europa, auch nach Basel.']};
+const RS_FADEN=['Gewürze','Weltbild','Aufbruch','Weltreise','Ankunft','Eroberung','Gold','Sklaverei','Heute'];
+const RS_KFRAGE={1:'Warum fahren die Europäer los?',4:'Wie gross ist die Welt wirklich?',5:'Was geschieht, wenn Europäer ankommen?',8:'Wer bezahlt den Preis, bis heute?'};
+function rsKFrage(n){let k=n;while(k>1&&!RS_KFRAGE[k])k--;return RS_KFRAGE[k];}
+const RS_FRAGE={2:'Wie stellten sich die Menschen die Erde vor?',3:'Wer fuhr mit Kolumbus, und wer bezahlte?',4:'Wer fuhr wohin, und wem gehörte plötzlich die Welt?',5:'Was geschah am 12. Oktober 1492 wirklich?',6:'Wie konnten 500 Spanier ein Reich mit Millionen Menschen besiegen?',7:'Warum wollte Pizarro das Inkareich erobern?',8:'Wer bezahlte für den Reichtum Europas?',9:'Was hat das alles mit uns heute zu tun?'};
+const RS_JW=['lebt 1791 in Basel','schreibt im Segerhof','Briefe nach Nantes','Wer schreibt Geschichte?','«Neue Welt»? Nicht für alle.','Intrépide: Stoffe für Afrika','Schiffe mit Menschen','21 Schiffe, Geld aus Basel'];
+
 let RS=null;
 function rsAudio(){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return null;const ac=new A(),m=ac.createGain();m.gain.value=introMuted()?0:.5;m.connect(ac.destination);return{ac:ac,m:m};}catch(e){return null;}}
 function rsTone(f,d,v,type,delay){if(!RS||!RS.au)return;const ac=RS.au.ac,o=ac.createOscillator(),g=ac.createGain(),t0=ac.currentTime+(delay||0);o.type=type||'triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(v,t0+.04);g.gain.exponentialRampToValueAtTime(.001,t0+d);o.connect(g);g.connect(RS.au.m);o.start(t0);o.stop(t0+d+.05);}
@@ -932,13 +947,13 @@ function startSchluss(done){RS={kind:'schluss',ph:0,t:0,st:0,done:done,au:rsAudi
 function reiseKey(e){if(!RS)return;const k=e.key;
   if(k==='m'||k==='M'){const off=!introMuted();try{localStorage.setItem('logbuch-ton',off?'aus':'an');}catch(_){}if(RS.au)RS.au.m.gain.value=off?0:.5;return;}
   if(k==='Escape'){rsEnd();return;}
-  if(k===' '||k==='Enter'){const L=RS.kind==='reise'?[4.5,5.5,99]:[5,6,7,99];if(RS.st<rsMin())return;if(RS.ph<L.length-1){RS.ph++;RS.st=0;rsPhase();}else rsEnd();}}
+  if(k===' '||k==='Enter'){const L=RS.kind==='reise'?[0,0,0,99]:[5,6,7,99];if(RS.st<rsMin())return;if(RS.ph<L.length-1){RS.ph++;RS.st=0;rsPhase();}else rsEnd();}}
 function rsPhase(){if(!RS)return;
-  if(RS.kind==='reise'){if(RS.ph===1){rsNoise(1800,.8,.12,'bandpass');[523,659,784].forEach((f,i)=>rsTone(f,.9,.05,'triangle',i*.15));}if(RS.ph===2){rsNoise(2600,.4,.1,'highpass');}}
+  if(RS.kind==='reise'){if(RS.ph===1){rsNoise(2600,.4,.1,'highpass');[392,523].forEach((f,i)=>rsTone(f,.7,.05,'triangle',i*.18));}if(RS.ph===2){rsNoise(1800,.8,.12,'bandpass');[523,659,784].forEach((f,i)=>rsTone(f,.9,.05,'triangle',i*.15));}if(RS.ph===3){rsNoise(2600,.4,.1,'highpass');}}
   else{if(RS.ph===1){rsNoise(2600,.6,.1,'highpass');}if(RS.ph===2){[294,349,440,392].forEach((f,i)=>rsTone(f,1.4,.07,'triangle',i*.5));}if(RS.ph===3){[294,370,440,587].forEach((f,i)=>rsTone(f,2.2,.06,'sine',i*.25));}}}
 function reiseTick(dt){if(!RS)return;try{if(RS.au&&RS.au.ac.state==='suspended')RS.au.ac.resume();RS.t+=dt;RS.st+=dt;
   /* kein automatisches Weiterschalten: die SuS lesen in ihrem Tempo und drücken die Leertaste */
-  if(RS.kind==='reise'&&RS.ph===1){const y=rsYear();if(y!==RS.ticked){RS.ticked=y;if(RS.st<4)rsTone(1200,.03,.03,'square');}}
+  if(RS.kind==='reise'&&RS.ph===2){const y=rsYear();if(y!==RS.ticked){RS.ticked=y;if(RS.st<4)rsTone(1200,.03,.03,'square');}}
   rsDraw();}catch(e){console.error(e);rsEnd();}}
 function rsYear(){const a=RS_ORT[RS.from][3]||new Date().getFullYear(),b=RS_ORT[RS.to][3]||new Date().getFullYear(),f=Math.min(1,Math.max(0,(RS.st-.6)/3));const e=f<.5?2*f*f:1-Math.pow(-2*f+2,2)/2;return Math.round(a+(b-a)*e);}
 // --- Filmszenen in die Spielwelt zeichnen ---
@@ -969,26 +984,34 @@ function rsDrawFilm(c,n,st){const F=RS_FILM[n];if(!F){R(c,0,0,VW,VH,'#0E1A2E');r
   (F.ships||[]).forEach(s=>{const f=Math.min(1,st/4.5),x=s.x0+(s.x1-s.x0)*f,bob=Math.sin(st*2+s.x0)*1;rsShip(c,x,s.y+bob,s.s,s);});
   if(st<.6){c.fillStyle='rgba(0,0,0,'+(1-st/.6)+')';c.fillRect(0,0,VW,VH);}}
 function rsDraw(){const c=wx;c.imageSmoothingEnabled=false;
-  if(RS.kind==='reise'){if(RS.ph===0)rsDrawFilm(c,RS.from,RS.st);else R(c,0,0,VW,VH,RS.ph===1?'#0E1A2E':'#2C1A0F');}
+  if(RS.kind==='reise'){if(RS.ph===0)rsDrawFilm(c,RS.from,RS.st);else R(c,0,0,VW,VH,RS.ph===2?'#0E1A2E':'#2C1A0F');}
   else rsDrawSchluss(c);}
 function rsWrap(t,maxW){const w=t.split(' '),L=[];let cur='';w.forEach(x=>{const tr=cur?cur+' '+x:x;if(ux.measureText(tr).width>maxW&&cur){L.push(cur);cur=x;}else cur=tr;});if(cur)L.push(cur);return L;}
 function drawReiseUI(){if(!RS)return;try{ux.textBaseline='alphabetic';
   if(RS.kind==='schluss'){drawSchlussUI();}
-  else if(RS.ph===0){font(8,false);const L=rsWrap(RS_FILM[RS.from]?RS_FILM[RS.from].cap:'',280);inSub(L,166-(L.length-1)*11);}
-  else if(RS.ph===1){const img=worldArt(),sc=1.05,mw=img.width*sc,mx=(VW-mw)/2,my=34;ux.imageSmoothingEnabled=false;ux.drawImage(img,mx,my,mw,img.height*sc);
+  else if(RS.ph===0){fontD(9);ux.textAlign='center';ux.fillStyle='rgba(8,10,20,.72)';ux.fillRect(VW/2-58,6,116,15);ux.fillStyle='#F2C14E';ux.fillText('Was danach geschah',VW/2,17);ux.textAlign='left';
+    font(7.5,false);const L=rsWrap(RS_FILM[RS.from]?RS_FILM[RS.from].cap:'',290);inSub(L,166-(L.length-1)*10);}
+  else if(RS.ph===1){rsRueckblick();}
+  else if(RS.ph===2){const img=worldArt(),sc=1.05,mw=img.width*sc,mx=(VW-mw)/2,my=34;ux.imageSmoothingEnabled=false;ux.drawImage(img,mx,my,mw,img.height*sc);
     const A=RS_ORT[RS.from],B=RS_ORT[RS.to],ax=mx+(A[1]*2+1)*sc,ay=my+(A[2]*2+1)*sc,bx=mx+(B[1]*2+1)*sc,by=my+(B[2]*2+1)*sc,f=Math.min(1,RS.st/2.2);
     ux.strokeStyle='#F2C14E';ux.lineWidth=1.4;ux.setLineDash([3,2]);ux.beginPath();ux.moveTo(ax,ay);const mxp=(ax+bx)/2,myp=Math.min(ay,by)-18;
     for(let i=1;i<=24*f;i++){const u=i/24,x=(1-u)*(1-u)*ax+2*(1-u)*u*mxp+u*u*bx,y=(1-u)*(1-u)*ay+2*(1-u)*u*myp+u*u*by;ux.lineTo(x,y);}ux.stroke();ux.setLineDash([]);
     const near=Math.hypot(ax-bx,ay-by)<14;[[ax,ay,A[0]],[bx,by,B[0]]].forEach(([x,y,n],i)=>{if(i===1&&f<1)return;if(i===0&&near&&f>=1)return;ux.fillStyle='rgba(242,193,78,.4)';ux.beginPath();ux.arc(x,y,Math.max(.1,4+Math.sin(RS.t*5)),0,7);ux.fill();ux.fillStyle='#F2C14E';ux.fillRect(x-1.5,y-1.5,3,3);font(6,true);ux.fillStyle='#FFF6DA';ux.fillText(n,x+5,y-3);});
-    ux.textAlign='center';font(7,false);ux.fillStyle='#A9B8CE';ux.fillText(RS_KAP[RS.to],VW/2,12);
-    fontD(18);ux.fillStyle='#F2C14E';const y=rsYear(),now=new Date().getFullYear();ux.fillText(RS.to===9&&RS.st>3.6?'heute':String(y===now&&RS.to===9?y:y),VW/2,29);
-    font(7,false);const L=rsWrap(RS_TXT[RS.from][0],290);ux.fillStyle='rgba(8,10,20,.75)';ux.fillRect(10,150-2,300,L.length*9+5);ux.fillStyle='#F3E6C6';L.forEach((l,i)=>ux.fillText(l,VW/2,155+i*9));ux.textAlign='left';}
-  else{const T=RS_TXT[RS.from],f=Math.min(1,RS.st/.6);ux.globalAlpha=f;ux.fillStyle='#F6ECD2';ux.fillRect(50,22,220,128);ux.strokeStyle='#8A6A44';ux.strokeRect(53,25,214,122);
-    ux.textAlign='center';font(7,false);ux.fillStyle='#8A6A44';ux.fillText('Am Rand der Seite, in brauner Tinte:',VW/2,42);
-    ux.font='italic 400 9px '+FONT;ux.fillStyle='#3A2716';const L=rsWrap(T[1],190);L.forEach((l,i)=>ux.fillText(l,VW/2,62+i*12));
-    font(7,true);ux.fillStyle='#8E2B1C';ux.fillText('J. W.',VW/2+60,64+L.length*12+8);font(6,false);ux.fillStyle='#8A6A44';ux.fillText(T[2],VW/2+60,64+L.length*12+17);
-    ux.globalAlpha=1;if(RS.st>1){font(7,true);ux.fillStyle=((RS.t*2|0)%2)?'#F2C14E':'#FFF6DA';ux.fillText('Leertaste: nächste Seite',VW/2,168);}ux.textAlign='left';}
-  {const lastPh=RS.kind==='reise'?2:3;if(RS.ph<lastPh&&RS.st>=rsMin()){font(7,true);ux.fillStyle=((RS.t*2|0)%2)?'#F2C14E':'#FFF6DA';ux.textAlign='left';ux.fillText('Leertaste: weiter',6,VH-3);}}
+    ux.textAlign='center';font(7,false);ux.fillStyle='#A9B8CE';ux.fillText(RS_KAP[RS.to],VW/2,11);
+    fontD(18);ux.fillStyle='#F2C14E';const y=rsYear();ux.fillText(RS.to===9&&RS.st>3.6?'heute':String(y),VW/2,29);
+    const T=RS_TXT[RS.from];font(6.5,true);const jw=ux.measureText(T[0]).width+10;chip(VW-8-jw,18,jw,11,'#8E2B1C');ux.fillStyle='#FFF6DA';ux.textAlign='left';ux.fillText(T[0],VW-8-jw+5,25.6);
+    ux.textAlign='center';font(7,false);const L=rsWrap(T[1],292);const q=RS_FRAGE[RS.to]||'';const h=L.length*9+(q?12:0)+6;ux.fillStyle='rgba(8,10,20,.82)';ux.fillRect(8,VH-12-h,304,h);ux.fillStyle='#F3E6C6';L.forEach((l,i)=>ux.fillText(l,VW/2,VH-12-h+9+i*9));
+    if(q&&RS.st>1.5){font(7,true);ux.fillStyle='#F2C14E';ux.fillText('Deine Frage dort: '+q,VW/2,VH-12-h+9+L.length*9+3);}ux.textAlign='left';}
+  else{const T=RS_TXT[RS.from],f=Math.min(1,RS.st/.6);ux.globalAlpha=f;ux.fillStyle='#F6ECD2';ux.fillRect(12,18,170,134);ux.strokeStyle='#8A6A44';ux.strokeRect(15,21,164,128);
+    ux.textAlign='center';font(6.5,false);ux.fillStyle='#8A6A44';ux.fillText('Am Rand der Seite, in brauner Tinte:',97,36);
+    ux.font='italic 400 8.5px '+FONT;ux.fillStyle='#3A2716';const L=rsWrap(T[2],148);L.forEach((l,i)=>ux.fillText(l,97,54+i*11));
+    font(7,true);ux.fillStyle='#8E2B1C';ux.fillText('J. W.',140,56+L.length*11+8);font(6,false);ux.fillStyle='#8A6A44';ux.fillText(T[3],140,56+L.length*11+17);
+    ux.fillStyle='#E9DCBC';ux.fillRect(190,18,120,134);ux.strokeStyle='#8A6A44';ux.strokeRect(193,21,114,128);ux.textAlign='left';
+    font(7,true);ux.fillStyle='#8E2B1C';ux.fillText('Die Spur von J. W.',199,34);font(5.5,false);ux.fillStyle='#8A6A44';ux.fillText('Was du über ihn weisst:',199,43);
+    for(let i=0;i<RS.from;i++){const nw=i===RS.from-1;font(6,nw);ux.fillStyle=nw?'#8E2B1C':'#3A2716';ux.fillText((nw?'+ ':'· ')+RS_JW[i],199,54+i*10);}
+    if(RS.from<8){font(5.5,false);ux.fillStyle='#8A6A44';ux.fillText('Wer ist J. W.? Das erfährst du am Ende.',199,144);}
+    ux.globalAlpha=1;if(RS.st>1){ux.textAlign='center';font(7,true);ux.fillStyle=((RS.t*2|0)%2)?'#F2C14E':'#FFF6DA';ux.fillText('Leertaste: nächste Seite',VW/2,166);}ux.textAlign='left';}
+  {const lastPh=3;if(RS.ph<lastPh&&RS.st>=rsMin()){font(7,true);ux.fillStyle=((RS.t*2|0)%2)?'#F2C14E':'#FFF6DA';ux.textAlign='left';ux.fillText('Leertaste: weiter',6,VH-3);}}
   font(6,false);ux.fillStyle='rgba(255,246,218,.75)';ux.textAlign='right';ux.fillText('Leertaste: weiter · Esc: überspringen · M: Ton '+(introMuted()?'an':'aus'),VW-6,VH-3);ux.textAlign='left';
   }catch(e){console.error(e);rsEnd();}}
 // --- Schluss: zurück im Estrich ---
@@ -1011,7 +1034,19 @@ function drawSchlussUI(){const ph=RS.ph,st=RS.st;
     font(6,false);ux.fillStyle='#A9B8CE';ux.fillText('Echt: der Segerhof, die Firmen der Familie Burckhardt, 21 Sklavenschiffe (1783–1815). Erfunden: Jakob Wenger.',VW/2,132);
     if(st>1.5){font(7,true);ux.fillStyle=((RS.t*2|0)%2)?'#F2C14E':'#FFF6DA';ux.fillText('Leertaste: zur Urkunde',VW/2,152);}ux.textAlign='left';}}
 
-function rsMin(){const M=RS.kind==='reise'?[2.5,3.5,1.5]:[2.5,2.5,2.5,1.5];return M[RS.ph]||1;}
+function rsMin(){const M=RS.kind==='reise'?[2.5,2.5,3.5,1.5]:[2.5,2.5,2.5,1.5];return M[RS.ph]||1;}
+function rsRueckblick(){const n=RS.from,O=RS_ORT[n],f=Math.min(1,RS.st/.5);ux.globalAlpha=f;
+  ux.fillStyle='#F6ECD2';ux.fillRect(24,10,272,100);ux.strokeStyle='#8A6A44';ux.strokeRect(27,13,266,94);ux.textAlign='center';
+  font(6.5,false);ux.fillStyle='#8A6A44';ux.fillText('Seite '+n+' von 9 ist gefüllt',VW/2,26);fontD(13);ux.fillStyle='#8E2B1C';ux.fillText(O[0]+(O[3]?', '+O[3]:''),VW/2,41);
+  ux.textAlign='left';font(7,true);ux.fillStyle='#3A2716';ux.fillText('Das hast du herausgefunden:',40,56);
+  (RS_REC[n]||[]).forEach((t,i)=>{if(RS.st<.6+i*.5)return;font(7,false);ux.fillStyle='#3A2716';ux.fillText('•  '+t,44,70+i*12);});
+  ux.globalAlpha=1;
+  ux.textAlign='center';font(6.5,false);ux.fillStyle='#CBB994';ux.fillText('Der rote Faden: Wie veränderten die Fahrten um 1500 die Welt?',VW/2,124);
+  const x0=26,dx=33.5,y=140;for(let i=0;i<9;i++){const x=x0+i*dx,done=i<n,next=i===n;
+    if(i<8){ux.strokeStyle=i<n-1?'#F2C14E':'#6A5A44';ux.lineWidth=1.2;ux.beginPath();ux.moveTo(x+6,y);ux.lineTo(x+dx-6,y);ux.stroke();}
+    ux.fillStyle=done?'#F2C14E':'#2C1A0F';ux.strokeStyle=next?(((RS.t*2|0)%2)?'#FFF6DA':'#F2C14E'):(done?'#F2C14E':'#6A5A44');ux.lineWidth=next?1.6:1;ux.beginPath();ux.arc(x,y,5.5,0,7);ux.fill();ux.stroke();
+    font(6,true);ux.fillStyle=done?'#2C1A0F':'#CBB994';ux.fillText(String(i+1),x,y+2.2);font(5.5,next||i===n-1);ux.fillStyle=next?'#FFF6DA':(done?'#F2C14E':'#8A7A64');ux.fillText(RS_FADEN[i],x,y+14);}
+  if(n<9){font(6.5,true);ux.fillStyle='#F2C14E';ux.fillText(RS_KAP[n+1]+': '+rsKFrage(n+1),VW/2,166);}ux.textAlign='left';}
 // ---------- Erweiterungen: Fundstücke, Räume, Verbote, Zeitsprünge, Tipps, Ränge, Klänge ----------
 const FUNDE={},TIP=2;let OUTMAP=null,flashAt=-1e9,flashTxt='';
 
