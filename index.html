@@ -781,13 +781,14 @@ function introEnd(){if(!IN)return;introRain(false);const ac=IN.ac,m=IN.master,cb
 function introKey(e){if(!IN)return;const k=e.key;
   if(k==='Escape'){introEnd();return;}
   if(k==='m'||k==='M'){const off=!introMuted();try{localStorage.setItem('logbuch-ton',off?'aus':'an');}catch(_){}if(IN.master)IN.master.gain.value=off?0:.55;return;}
+  if((k===' '||k==='Enter')&&IN.hold){if(IN.t-IN.holdAt>.6){IN.hold=false;IN.hp++;}return;}
   if((k===' '||k==='Enter')&&IN.wait){IN.wait=false;IN.st=0;if(IN.scene===1){IN.opened=IN.t;inBurst(180,.35,.5);inBurst(2400,.6,.12,'highpass');}if(IN.scene===4){introEnd();}}
 }
 // Szenen: 0 Gasse, 1 Estrich (wartet), 2 Buch, 3 Weltkarte, 4 Logbuchseite (wartet)
-const IN_LEN=[13,99,5.5,8.5,99];
+const IN_LEN=[14,99,5.5,8.5,99];const IN_HOLD={0:[6,13.9],2:[5.4],3:[8.4]};
 function introTick(dt){if(!IN)return;try{introTick2(dt);}catch(e){console.error(e);introEnd();}}
 function introTick2(dt){if(IN.ac&&IN.ac.state==='suspended')IN.ac.resume();
-  IN.t+=dt;if(!IN.wait||IN.scene===4)IN.st+=dt;const s=IN.scene,st=IN.st;
+  IN.t+=dt;if(IN.lastScene!==IN.scene){IN.lastScene=IN.scene;IN.hp=0;IN.hold=false;}if((!IN.wait||IN.scene===4)&&!IN.hold)IN.st+=dt;{const H=IN_HOLD[IN.scene]||[];if(!IN.hold&&H[IN.hp]!=null&&IN.st>=H[IN.hp]){IN.hold=true;IN.holdAt=IN.t;}}const s=IN.scene,st=IN.st;
   if(s===0){const tx=232;if(IN.px<tx){IN.px+=dt*30;IN.stepAcc=(IN.stepAcc||0)+dt;if(IN.stepAcc>.32){IN.stepAcc=0;inBurst(900,.05,.18);}}
     if(st>IN_LEN[0]){IN.scene=1;IN.st=0;IN.px=40;IN.dir='right';introRain(false);inCreak();setTimeout(inCreak,700);}}
   else if(s===1){if(IN.px<176&&!IN.opened){IN.px+=dt*24;IN.stepAcc=(IN.stepAcc||0)+dt;if(IN.stepAcc>.36){IN.stepAcc=0;inBurst(500,.06,.2);}}
@@ -865,8 +866,9 @@ function inBook(cx,cy,w,h,openF){const L='#5A3A22',G2='#C99A3A';
   if(openF<.2){ux.textAlign='center';ux.fillStyle='#E8C36E';ux.font='700 13px '+DISP;ux.fillText('Logbuch',cx,cy+4);ux.textAlign='left';}
   else{ux.fillStyle='rgba(90,58,34,.25)';ux.fillRect(cx-.5,cy-h/2+3,1,h-6);}}
 function drawIntroUI(){if(!IN)return;try{drawIntroUI2();}catch(e){console.error(e);introEnd();}}
-function drawIntroUI2(){const s=IN.scene,st=IN.st,t=IN.t;ux.textBaseline='alphabetic';
-  if(s===0){if(st>1.2&&st<6.2)inSub(['Basel, heute. Ein Abend im Herbst.'],160);if(st>6.4&&st<12.2)inSub(['Deine Grossmutter hat angerufen:','«Im Estrich liegt etwas, das dir gehören soll.»'],152);}
+function drawIntroUI2(){drawIntroUI3();if(IN&&IN.hold&&IN.t-IN.holdAt>.6){const b=(IN.t*2|0)%2;ux.textAlign='left';font(7,true);ux.fillStyle=b?'#F2C14E':'#FFF6DA';ux.fillText('Leertaste: weiter',6,VH-5);}}
+function drawIntroUI3(){const s=IN.scene,st=IN.st,t=IN.t;ux.textBaseline='alphabetic';
+  if(s===0){if(st>1.2&&st<6.2)inSub(['Basel, heute. Ein Abend im Herbst.'],160);if(st>6.4)inSub(['Deine Grossmutter hat angerufen:','«Im Estrich liegt etwas, das dir gehören soll.»'],152);}
   if(s===1){if(IN.wait){inSub(['Eine alte Truhe. Sie ist nicht verschlossen.'],150);const b=(t*2|0)%2;ux.textAlign='center';font(7,true);ux.fillStyle=b?'#E8C36E':'#FFF6DA';ux.fillText('Leertaste: Truhe öffnen',VW/2,172);ux.textAlign='left';}
     else if(IN.opened)inSub(['Darin liegt ein Buch aus Leder.'],150);}
   if(s===2){const f=Math.min(1,st/1.2),of=st<1.6?0:Math.min(1,(st-1.6)/1);
@@ -930,12 +932,12 @@ function startSchluss(done){RS={kind:'schluss',ph:0,t:0,st:0,done:done,au:rsAudi
 function reiseKey(e){if(!RS)return;const k=e.key;
   if(k==='m'||k==='M'){const off=!introMuted();try{localStorage.setItem('logbuch-ton',off?'aus':'an');}catch(_){}if(RS.au)RS.au.m.gain.value=off?0:.5;return;}
   if(k==='Escape'){rsEnd();return;}
-  if(k===' '||k==='Enter'){const L=RS.kind==='reise'?[4.5,5.5,99]:[5,6,7,99];if(RS.st<.8)return;if(RS.ph<L.length-1){RS.ph++;RS.st=0;rsPhase();}else rsEnd();}}
+  if(k===' '||k==='Enter'){const L=RS.kind==='reise'?[4.5,5.5,99]:[5,6,7,99];if(RS.st<rsMin())return;if(RS.ph<L.length-1){RS.ph++;RS.st=0;rsPhase();}else rsEnd();}}
 function rsPhase(){if(!RS)return;
   if(RS.kind==='reise'){if(RS.ph===1){rsNoise(1800,.8,.12,'bandpass');[523,659,784].forEach((f,i)=>rsTone(f,.9,.05,'triangle',i*.15));}if(RS.ph===2){rsNoise(2600,.4,.1,'highpass');}}
   else{if(RS.ph===1){rsNoise(2600,.6,.1,'highpass');}if(RS.ph===2){[294,349,440,392].forEach((f,i)=>rsTone(f,1.4,.07,'triangle',i*.5));}if(RS.ph===3){[294,370,440,587].forEach((f,i)=>rsTone(f,2.2,.06,'sine',i*.25));}}}
 function reiseTick(dt){if(!RS)return;try{if(RS.au&&RS.au.ac.state==='suspended')RS.au.ac.resume();RS.t+=dt;RS.st+=dt;
-  const L=RS.kind==='reise'?[4.5,5.5,99]:[5,6,7,99];if(RS.st>L[RS.ph]&&RS.ph<L.length-1){RS.ph++;RS.st=0;rsPhase();}
+  /* kein automatisches Weiterschalten: die SuS lesen in ihrem Tempo und drücken die Leertaste */
   if(RS.kind==='reise'&&RS.ph===1){const y=rsYear();if(y!==RS.ticked){RS.ticked=y;if(RS.st<4)rsTone(1200,.03,.03,'square');}}
   rsDraw();}catch(e){console.error(e);rsEnd();}}
 function rsYear(){const a=RS_ORT[RS.from][3]||new Date().getFullYear(),b=RS_ORT[RS.to][3]||new Date().getFullYear(),f=Math.min(1,Math.max(0,(RS.st-.6)/3));const e=f<.5?2*f*f:1-Math.pow(-2*f+2,2)/2;return Math.round(a+(b-a)*e);}
@@ -986,6 +988,7 @@ function drawReiseUI(){if(!RS)return;try{ux.textBaseline='alphabetic';
     ux.font='italic 400 9px '+FONT;ux.fillStyle='#3A2716';const L=rsWrap(T[1],190);L.forEach((l,i)=>ux.fillText(l,VW/2,62+i*12));
     font(7,true);ux.fillStyle='#8E2B1C';ux.fillText('J. W.',VW/2+60,64+L.length*12+8);font(6,false);ux.fillStyle='#8A6A44';ux.fillText(T[2],VW/2+60,64+L.length*12+17);
     ux.globalAlpha=1;if(RS.st>1){font(7,true);ux.fillStyle=((RS.t*2|0)%2)?'#F2C14E':'#FFF6DA';ux.fillText('Leertaste: nächste Seite',VW/2,168);}ux.textAlign='left';}
+  {const lastPh=RS.kind==='reise'?2:3;if(RS.ph<lastPh&&RS.st>=rsMin()){font(7,true);ux.fillStyle=((RS.t*2|0)%2)?'#F2C14E':'#FFF6DA';ux.textAlign='left';ux.fillText('Leertaste: weiter',6,VH-3);}}
   font(6,false);ux.fillStyle='rgba(255,246,218,.75)';ux.textAlign='right';ux.fillText('Leertaste: weiter · Esc: überspringen · M: Ton '+(introMuted()?'an':'aus'),VW-6,VH-3);ux.textAlign='left';
   }catch(e){console.error(e);rsEnd();}}
 // --- Schluss: zurück im Estrich ---
@@ -1005,8 +1008,10 @@ function drawSchlussUI(){const ph=RS.ph,st=RS.st;
     L.forEach((l,i)=>ux.fillText(l,VW/2,50+i*12));font(7,true);ux.fillStyle='#8E2B1C';ux.fillText('Jakob Wenger, Basel 1815',VW/2+40,142);ux.textAlign='left';}
   if(ph===3){ux.fillStyle='rgba(10,8,6,.82)';ux.fillRect(0,0,VW,VH);ux.textAlign='center';fontD(15);ux.fillStyle='#F2C14E';ux.fillText('Das Logbuch ist vollständig.',VW/2,62);
     font(8,false);ux.fillStyle='#F3E6C6';ux.fillText('Jetzt weisst du, was in diesem Buch steht.',VW/2,86);font(9,true);ux.fillStyle='#FFFFFF';ux.fillText('Was machst du damit?',VW/2,104);
-    font(6,false);ux.fillStyle='#A9B8CE';ux.fillText('Echt: der Segerhof, Christoph Burckhardt & Cie., die 21 Sklavenschiffe (1783–1815). Erfunden: Jakob Wenger.',VW/2,132);
+    font(6,false);ux.fillStyle='#A9B8CE';ux.fillText('Echt: der Segerhof, die Firmen der Familie Burckhardt, 21 Sklavenschiffe (1783–1815). Erfunden: Jakob Wenger.',VW/2,132);
     if(st>1.5){font(7,true);ux.fillStyle=((RS.t*2|0)%2)?'#F2C14E':'#FFF6DA';ux.fillText('Leertaste: zur Urkunde',VW/2,152);}ux.textAlign='left';}}
+
+function rsMin(){const M=RS.kind==='reise'?[2.5,3.5,1.5]:[2.5,2.5,2.5,1.5];return M[RS.ph]||1;}
 // ---------- Erweiterungen: Fundstücke, Räume, Verbote, Zeitsprünge, Tipps, Ränge, Klänge ----------
 const FUNDE={},TIP=2;let OUTMAP=null,flashAt=-1e9,flashTxt='';
 
