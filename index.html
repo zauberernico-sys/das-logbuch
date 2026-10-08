@@ -65,7 +65,7 @@ document.addEventListener('fullscreenchange',upd);})();
 const VW=320,VH=180,T=16;
 const STATIONS=['01-lissabon','02-kartenwerkstatt','03-palos','04-sevilla','05-guanahani','06-tenochtitlan','07-cajamarca','08-kolonien','09-gegenwart'];
 const FONT='"Atkinson Hyperlegible",ui-rounded,"Segoe UI",system-ui,-apple-system,sans-serif';
-const DISP='"PixZiff","Pixelify Sans",'+FONT;
+const LOGO='"PixZiff","Pixelify Sans",'+FONT;const DISP=FONT;
 try{document.fonts.load('700 12px "Pixelify Sans"');document.fonts.load('400 12px "Atkinson Hyperlegible"');document.fonts.load('700 12px "Atkinson Hyperlegible"');}catch(e){}
 const INK='#1B2A41',PAPER='#FFFDF5',GOLD='#F2C14E',RED='#7A1F2B',MUTE='#5B6779',BLUE='#2364AA';
 const SAVEKEY='logbuch-v1';
@@ -731,7 +731,7 @@ function drawMenu(){box(10,10,300,160,PAPER);ux.textBaseline='alphabetic';let tx
   ux.restore();}
 function shade(a){ux.fillStyle='rgba(15,27,51,'+a+')';ux.fillRect(0,0,VW,VH);}
 function drawTitle(){shade(.55);ux.textBaseline='alphabetic';ux.textAlign='center';const cx=VW/2,cy=24;ux.strokeStyle=GOLD;ux.lineWidth=1;ux.beginPath();ux.arc(cx,cy,9,0,7);ux.stroke();ux.fillStyle=GOLD;for(let i=0;i<4;i++){const a=i*Math.PI/2;ux.beginPath();ux.moveTo(cx+Math.cos(a)*12,cy+Math.sin(a)*12);ux.lineTo(cx+Math.cos(a+1.57)*2.4,cy+Math.sin(a+1.57)*2.4);ux.lineTo(cx-Math.cos(a+1.57)*2.4,cy-Math.sin(a+1.57)*2.4);ux.fill();}ux.fillStyle=INK;ux.beginPath();ux.arc(cx,cy,1.6,0,7);ux.fill();
-  fontD(30);ux.fillStyle='rgba(0,0,0,.45)';ux.fillText('Das Logbuch',VW/2+1,60);ux.fillStyle='#FFFFFF';ux.fillText('Das Logbuch',VW/2,59);ux.fillStyle=GOLD;ux.fillRect(VW/2-58,66,116,1.2);font(7.5,false);ux.fillStyle='#E3ECF7';ux.fillText('Entdeckungen und Kolonialismus um 1500 · neun Stationen',VW/2,77);ux.textAlign='left';
+  ux.font='700 30px '+LOGO;ux.fillStyle='rgba(0,0,0,.45)';ux.fillText('Das Logbuch',VW/2+1,60);ux.fillStyle='#FFFFFF';ux.fillText('Das Logbuch',VW/2,59);ux.fillStyle=GOLD;ux.fillRect(VW/2-58,66,116,1.2);font(7.5,false);ux.fillStyle='#E3ECF7';ux.fillText('Entdeckungen und Kolonialismus um 1500 · neun Stationen',VW/2,77);ux.textAlign='left';
   const w=150,x=(VW-w)/2;title.opts.forEach((o,i)=>{const y=88+i*18;ux.fillStyle=i===title.sel?GOLD:PAPER;ux.fillRect(x,y,w,14);ux.strokeStyle=INK;ux.lineWidth=1;ux.strokeRect(x,y,w,14);font(7.5,i===title.sel);ux.fillStyle=INK;ux.textAlign='center';ux.fillText(o,VW/2,y+9.8);ux.textAlign='left';});
   font(6,false);ux.fillStyle='#E3ECF7';ux.textAlign='center';ux.fillText('Zuerst ins Spiel klicken · Pfeiltasten: wählen · Leertaste: bestätigen',VW/2,166);ux.textAlign='left';}
 function drawLook(){shade(.6);ux.textAlign='center';fontD(13);ux.fillStyle='#FFFFFF';ux.fillText('Wähle deine Figur',VW/2,40);ux.textAlign='left';ux.imageSmoothingEnabled=false;
@@ -865,7 +865,7 @@ function inBook(cx,cy,w,h,openF){const L='#5A3A22',G2='#C99A3A';
   const pw=w/2*openF;ux.fillStyle='#F6ECD2';ux.fillRect(cx-pw,cy-h/2+3,pw*2,h-6);
   ux.fillStyle=L;ux.fillRect(cx-w/2,cy-h/2,w/2-pw+2,h);ux.fillRect(cx+pw-2,cy-h/2,w/2-pw+2,h);
   ux.strokeStyle=G2;ux.lineWidth=.8;ux.strokeRect(cx-w/2+3,cy-h/2+3,w-6,h-6);
-  if(openF<.2){ux.textAlign='center';ux.fillStyle='#E8C36E';ux.font='700 13px '+DISP;ux.fillText('Logbuch',cx,cy+4);ux.textAlign='left';}
+  if(openF<.2){ux.textAlign='center';ux.fillStyle='#E8C36E';ux.font='700 13px '+LOGO;ux.fillText('Logbuch',cx,cy+4);ux.textAlign='left';}
   else{ux.fillStyle='rgba(90,58,34,.25)';ux.fillRect(cx-.5,cy-h/2+3,1,h-6);}}
 function drawIntroUI(){if(!IN)return;try{drawIntroUI2();}catch(e){console.error(e);introEnd();}}
 function drawIntroUI2(){drawIntroUI3();if(IN&&IN.hold&&IN.t-IN.holdAt>.6){const b=(IN.t*2|0)%2;ux.textAlign='left';font(7,true);ux.fillStyle=b?'#F2C14E':'#FFF6DA';ux.fillText('Leertaste: weiter',6,VH-5);}}
