@@ -58,6 +58,7 @@ b.addEventListener('click',function(){
 });
 document.addEventListener('fullscreenchange',upd);})();
 </script>
+<script>try{if('serviceWorker' in navigator&&location.protocol==='https:'&&/github\.io$/.test(location.hostname))navigator.serviceWorker.register('sw.js').catch(function(){});}catch(e){}</script>
 <script>
 (function(){'use strict';
 // Das Logbuch – kleine Spiel-Engine. Inhalte kommen aus stations/<ordner>/map.json und script.json.
@@ -262,7 +263,7 @@ function next(){
       case'note':addNote(s.text);break;
       case'checkpoint':G.cp=Math.max(G.cp,s.n);break;
       case'goto':dlg.stack=[{steps:DATA.nodes[s.node],i:0}];break;
-      case'finish':dlg=null;mode='end';save();return;
+      case'finish':dlg=null;mode='end';save();if(DATA.station.nr>=STATIONS.length){startSchluss(()=>{mode='end';});}return;
     }}
   dlg=null;mode='play';save();
 }
@@ -584,6 +585,7 @@ function mapKey(e){const k=e.key;if(k==='ArrowUp'||k==='w'||k==='W')return'up';i
 function onKey(e){
   if(mode==='load')return;
   if(mode==='intro'){introKey(e);e.preventDefault();return;}
+  if(mode==='reise'){reiseKey(e);e.preventDefault();return;}
   if(mode==='dialog'&&dlg&&dlg.cur){const t=dlg.cur.s.t;
     if(t==='input'){if(e.key==='Tab')openMenu('dialog');else inputChar(e);e.preventDefault();return;}
     if(e.key==='i'||e.key==='I'){openMenu('dialog');e.preventDefault();return;}
@@ -602,7 +604,7 @@ function onKey(e){
   else if(mode==='dialog'){dialogKey(k);}
   else if(mode==='mini'){miniKey(k);}
   else if(mode==='menu'){if(k==='menu')mode=(menu.back==='dialog'&&dlg)?'dialog':'play';else if(k==='left'){menu.tab=(menu.tab+3)%4;menu.scroll=0;}else if(k==='right'){menu.tab=(menu.tab+1)%4;menu.scroll=0;}else if(k==='up')menu.scroll=Math.max(0,menu.scroll-1);else if(k==='down')menu.scroll++;}
-  else if(mode==='end'){if(k==='ok'||k==='space'){if(DATA.station.nr<STATIONS.length)enterStation(DATA.station.nr+1,true);else mode='play';}}
+  else if(mode==='end'){if(k==='ok'||k==='space'){const nr=DATA.station.nr;if(nr<STATIONS.length)startReise(nr,nr+1,()=>enterStation(nr+1,true));else mode='play';}}
 }
 window.addEventListener('keydown',onKey);
 window.addEventListener('keyup',e=>{const k=mapKey(e);if(k)keys[k]=false;});
@@ -735,12 +737,12 @@ function drawEnd(){shade(.6);box(40,34,240,112,PAPER);ux.textAlign='center';font
   ux.fillText(DATA.station.nr<STATIONS.length?'Leertaste: die nächste Seite aufschlagen':(DATA.station.nr>=9?'Leertaste: weiter umsehen':'Leertaste: weiter umsehen (die nächste Station folgt)'),VW/2,136);ux.textAlign='left';}
 function drawUI(){ux.setTransform(K,0,0,K,0,0);ux.clearRect(0,0,VW,VH);ux.textAlign='left';ux.textBaseline='alphabetic';
   if(mode==='load'){ux.fillStyle=INK;ux.fillRect(0,0,VW,VH);font(8,false);ux.fillStyle='#FFFFFF';ux.fillText(loadMsg,16,VH/2);return;}
-  if(mode==='intro'){drawIntroUI();return;}if(mode==='title'){drawTitle();return;}if(mode==='look'){drawLook();return;}if(mode==='codein'){drawCodeIn();return;}
+  if(mode==='intro'){drawIntroUI();return;}if(mode==='reise'){drawReiseUI();return;}if(mode==='title'){drawTitle();return;}if(mode==='look'){drawLook();return;}if(mode==='codein'){drawCodeIn();return;}
   drawHUD();ux.textBaseline='alphabetic';if(mode==='dialog'&&dlg&&dlg.cur)drawDialog();if(mode==='mini'&&mini)drawMini();if(mode==='menu')drawMenu();if(mode==='end')drawEnd();}
 
 // ---------- Start ----------
 let loadMsg='Das Logbuch wird geladen …',last=0;
-function frame(t){now=t;const dt=Math.min(.05,(t-last)/1000);last=t;if(mode==='intro'){introTick(dt);}else if(MAP&&DATA&&mode!=='load'){update(dt);drawWorld();}drawUI();requestAnimationFrame(frame);}
+function frame(t){now=t;const dt=Math.min(.05,(t-last)/1000);last=t;if(mode==='intro'){introTick(dt);}else if(mode==='reise'){reiseTick(dt);}else if(MAP&&DATA&&mode!=='load'){update(dt);drawWorld();}drawUI();requestAnimationFrame(frame);}
 function start(){const s=loadSave();const st=(s&&s.st>=1&&s.st<=STATIONS.length)?s.st:1;
   loadStation(st).then(()=>{titleOpts();G=s&&s.st===st?s:fresh();if(G.x>=MAP.w||G.y>=MAP.h)G=fresh();placePlayer();mode='title';})
   .catch(()=>{loadMsg='Das Spiel konnte nicht geladen werden. Lade die Seite neu.';});}
@@ -884,6 +886,118 @@ function drawIntroUI2(){const s=IN.scene,st=IN.st,t=IN.t;ux.textBaseline='alphab
   // immer: Überspringen und Ton
   font(6,false);ux.fillStyle='rgba(255,246,218,.75)';ux.textAlign='right';ux.fillText('Esc: überspringen · M: Ton '+(introMuted()?'an':'aus'),VW-6,VH-5);ux.textAlign='left';
 }
+// ---------- Zeitreise zwischen den Stationen und Schluss im Estrich ----------
+// Ablauf pro Übergang: Filmszene der abgeschlossenen Station → Weltkarte mit Linie und Jahreszahl → Notiz des Schreibers.
+const RS_ORT={1:['Lissabon',67,14,1490],2:['Nürnberg',72,10,1492],3:['Palos',69,15,1492],4:['Sevilla',70,15,1522],5:['Guanahani',42,20,1492],6:['Tenochtitlán',30,22,1519],7:['Cajamarca',39,33,1532],8:['Hispaniola',46,21,1511],9:['Basel',71,11,0]};
+const RS_KAP={1:'Kapitel I · Aufbruch',2:'Kapitel I · Aufbruch',3:'Kapitel I · Aufbruch',4:'Kapitel II · Die grossen Fahrten',5:'Kapitel III · Begegnung und Eroberung',6:'Kapitel III · Begegnung und Eroberung',7:'Kapitel III · Begegnung und Eroberung',8:'Kapitel IV · Die Folgen',9:'Kapitel IV · Die Folgen'};
+const RS_FILM={
+ 1:{cap:'Bald darauf segeln portugiesische Schiffe um Afrika herum nach Indien.',sky:[[70,40,70],[230,140,90]],sea:1,ships:[{x0:150,x1:320,y:118,s:1}],city:'lissabon'},
+ 2:{cap:'Der Erdapfel von 1492: die Welt, wie man sie kannte. Amerika fehlt.',globe:1},
+ 3:{cap:'3. August 1492: Drei Schiffe legen im Hafen von Palos ab.',sky:[[30,40,80],[240,170,120]],sea:1,ships:[{x0:60,x1:250,y:116,s:1},{x0:20,x1:200,y:124,s:.8},{x0:-10,x1:160,y:130,s:.7}],city:'palos'},
+ 4:{cap:'September 1522: Von fünf Schiffen kehrt nur eines zurück, die Victoria.',sky:[[90,110,140],[200,190,170]],sea:1,ships:[{x0:330,x1:170,y:120,s:1,torn:1}]},
+ 5:{cap:'12. Oktober 1492: Am Horizont tauchen fremde Segel auf.',sky:[[60,90,150],[250,200,140]],sea:1,beach:1,ships:[{x0:250,x1:230,y:104,s:.35},{x0:280,x1:262,y:105,s:.3},{x0:220,x1:205,y:106,s:.3}]},
+ 6:{cap:'August 1521: Tenochtitlán ist zerstört. Die Spanier bauen auf den Trümmern ihre Stadt.',sky:[[60,50,60],[160,110,90]],lake:1,smoke:1},
+ 7:{cap:'1533: Atahualpa wird getötet. Das Inkareich zerfällt.',sky:[[20,24,50],[90,70,100]],andes:1},
+ 8:{cap:'Bis ins 19. Jahrhundert verschleppen Europäer über 12 Millionen Menschen über den Atlantik.',sky:[[10,14,30],[40,50,80]],sea:1,night:1,ships:[{x0:300,x1:120,y:112,s:.8,dark:1}]}
+};
+const RS_TXT={
+ 1:['Alle reden vom Weg nach Indien. Aber wie sieht die Welt überhaupt aus? Die nächste Seite führt zu den Kartenmachern nach Nürnberg.','«Gewürze, Gold, Elfenbein, und Menschen. Schon damals.»','Basel, im Mai 1791'],
+ 2:['Wer an eine kurze Fahrt nach Westen glaubt, braucht nur noch Schiffe. In Palos liegen sie bereit.','«Im Kontor sagt man, die Welt sei ein einziger grosser Markt.»','Segerhof, 1791'],
+ 3:['Diese Seite springt 30 Jahre nach vorn: Was ist aus den grossen Fahrten geworden?','«Jeden Tag kopiere ich Briefe nach Nantes. Es gehe um Stoffe, sagt man mir.»','Segerhof, 1792'],
+ 4:['Jetzt zurück zum 12. Oktober 1492. Diesmal stehst du auf der anderen Seite des Meeres.','«Wer hat diese Geschichten aufgeschrieben? Immer nur die, die ankamen.»','Segerhof, 1793'],
+ 5:['27 Jahre nach Guanahani landet Hernán Cortés in Mexiko. Dort steht eine Stadt, grösser als jede in Spanien.','«Im Kontor sagt man ‹Neue Welt›. Für die Menschen dort war sie nicht neu.»','Segerhof, 1795'],
+ 6:['Elf Jahre später zieht Pizarro nach Süden, hinauf in die Anden.','«Heute ein Brief über ein Schiff namens Intrépide. Ladung: Indiennes für Afrika. Und zurück? Darüber schreibt niemand.»','Segerhof, 1797'],
+ 7:['Was wurde aus den Menschen in den eroberten Ländern? Die nächste Seite springt zurück ins Jahr 1511, und dann weit nach vorn.','«Ich habe die Bücher gesehen. Die Schiffe fahren nach Afrika und dann in die Karibik. Mit Menschen an Bord.»','Segerhof, 1801'],
+ 8:['Die letzte Seite führt nach Hause: nach Basel, in die Gegenwart.','«Einundzwanzig Schiffe. Bezahlt auch mit Geld aus Basel. Ich schreibe es auf, damit es jemand weiss.»','Basel, 1815']
+};
+let RS=null;
+function rsAudio(){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return null;const ac=new A(),m=ac.createGain();m.gain.value=introMuted()?0:.5;m.connect(ac.destination);return{ac:ac,m:m};}catch(e){return null;}}
+function rsTone(f,d,v,type,delay){if(!RS||!RS.au)return;const ac=RS.au.ac,o=ac.createOscillator(),g=ac.createGain(),t0=ac.currentTime+(delay||0);o.type=type||'triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(v,t0+.04);g.gain.exponentialRampToValueAtTime(.001,t0+d);o.connect(g);g.connect(RS.au.m);o.start(t0);o.stop(t0+d+.05);}
+function rsNoise(f,d,v,type){if(!RS||!RS.au)return;const ac=RS.au.ac,b=ac.createBuffer(1,ac.sampleRate*(d+.05),ac.sampleRate),x=b.getChannelData(0);for(let i=0;i<x.length;i++)x[i]=Math.random()*2-1;const s=ac.createBufferSource();s.buffer=b;const fl=ac.createBiquadFilter();fl.type=type||'lowpass';fl.frequency.value=f;const g=ac.createGain();g.gain.setValueAtTime(v,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);s.connect(fl);fl.connect(g);g.connect(RS.au.m);s.start();}
+function rsEnd(){if(!RS)return;const r=RS;RS=null;if(r.au){try{r.au.m.gain.linearRampToValueAtTime(0,r.au.ac.currentTime+.6);setTimeout(()=>{try{r.au.ac.close();}catch(e){}},900);}catch(e){}}mode='play';r.done&&r.done();}
+function startReise(from,to,done){RS={kind:'reise',from:from,to:to,ph:0,t:0,st:0,done:done,au:rsAudio(),ticked:-1};mode='reise';
+  const F=RS_FILM[from];if(F&&F.sea&&RS.au)rsNoise(500,2.5,.05);if(from===8&&RS.au)[196,165,147].forEach((f,i)=>rsTone(f,1.8,.06,'sine',i*.9));}
+function startSchluss(done){RS={kind:'schluss',ph:0,t:0,st:0,done:done,au:rsAudio()};mode='reise';if(RS.au){rsNoise(300,1.2,.15);}}
+function reiseKey(e){if(!RS)return;const k=e.key;
+  if(k==='m'||k==='M'){const off=!introMuted();try{localStorage.setItem('logbuch-ton',off?'aus':'an');}catch(_){}if(RS.au)RS.au.m.gain.value=off?0:.5;return;}
+  if(k==='Escape'){rsEnd();return;}
+  if(k===' '||k==='Enter'){const L=RS.kind==='reise'?[4.5,5.5,99]:[5,6,7,99];if(RS.st<.8)return;if(RS.ph<L.length-1){RS.ph++;RS.st=0;rsPhase();}else rsEnd();}}
+function rsPhase(){if(!RS)return;
+  if(RS.kind==='reise'){if(RS.ph===1){rsNoise(1800,.8,.12,'bandpass');[523,659,784].forEach((f,i)=>rsTone(f,.9,.05,'triangle',i*.15));}if(RS.ph===2){rsNoise(2600,.4,.1,'highpass');}}
+  else{if(RS.ph===1){rsNoise(2600,.6,.1,'highpass');}if(RS.ph===2){[294,349,440,392].forEach((f,i)=>rsTone(f,1.4,.07,'triangle',i*.5));}if(RS.ph===3){[294,370,440,587].forEach((f,i)=>rsTone(f,2.2,.06,'sine',i*.25));}}}
+function reiseTick(dt){if(!RS)return;try{if(RS.au&&RS.au.ac.state==='suspended')RS.au.ac.resume();RS.t+=dt;RS.st+=dt;
+  const L=RS.kind==='reise'?[4.5,5.5,99]:[5,6,7,99];if(RS.st>L[RS.ph]&&RS.ph<L.length-1){RS.ph++;RS.st=0;rsPhase();}
+  if(RS.kind==='reise'&&RS.ph===1){const y=rsYear();if(y!==RS.ticked){RS.ticked=y;if(RS.st<4)rsTone(1200,.03,.03,'square');}}
+  rsDraw();}catch(e){console.error(e);rsEnd();}}
+function rsYear(){const a=RS_ORT[RS.from][3]||new Date().getFullYear(),b=RS_ORT[RS.to][3]||new Date().getFullYear(),f=Math.min(1,Math.max(0,(RS.st-.6)/3));const e=f<.5?2*f*f:1-Math.pow(-2*f+2,2)/2;return Math.round(a+(b-a)*e);}
+// --- Filmszenen in die Spielwelt zeichnen ---
+function rsShip(c,x,y,s,o){const w=28*s,h=26*s;c.fillStyle=o.dark?'#1A1410':'#5A3820';c.beginPath();c.moveTo(x-w/2,y);c.lineTo(x+w/2,y);c.lineTo(x+w/2-4*s,y+6*s);c.lineTo(x-w/2+4*s,y+6*s);c.fill();
+  c.fillStyle=o.dark?'#222':'#3A2418';c.fillRect(x-.5,y-h,1.2,h);c.fillRect(x-8*s,y-h*.7,1,h*.7);
+  c.fillStyle=o.dark?'#5A5A66':'#F3E6C6';const sw=12*s,sh=14*s;if(o.torn){c.fillRect(x-sw/2,y-h+2,sw*.7,sh*.8);c.fillRect(x-8*s-4*s,y-h*.65,6*s,8*s);}else{c.fillRect(x-sw/2,y-h+2,sw,sh);c.fillRect(x-8*s-5*s,y-h*.65,8*s,10*s);}
+  if(!o.dark&&!o.torn){c.fillStyle='#B5523A';c.fillRect(x-1.5*s,y-h+5*s,3*s,6*s);c.fillRect(x-4*s,y-h+7*s,8*s,2*s);}}
+function rsDrawFilm(c,n,st){const F=RS_FILM[n];if(!F){R(c,0,0,VW,VH,'#0E1A2E');return;}
+  if(F.globe){R(c,0,0,VW,VH,'#1A120C');c.fillStyle='rgba(255,200,120,.10)';c.beginPath();c.arc(160,86,90,0,7);c.fill();
+    const r=46;c.fillStyle='#2F6FA8';c.beginPath();c.arc(160,84,r,0,7);c.fill();c.save();c.beginPath();c.arc(160,84,r,0,7);c.clip();
+    const off=(st*14)%140;c.fillStyle='#D8C290';for(let k=-1;k<2;k++){const bx=160-70+k*140-off;c.fillRect(bx+20,60,40,30);c.fillRect(bx+70,56,50,22);c.fillRect(bx+80,78,22,30);c.fillRect(bx+10,92,18,10);}c.restore();
+    c.strokeStyle='#C99A3A';c.lineWidth=3;c.beginPath();c.arc(160,84,r+5,Math.PI*.8,Math.PI*2.2);c.stroke();R(c,157,130,6,26,'#5A3820');R(c,138,154,44,6,'#5A3820');
+    c.fillStyle='rgba(255,220,140,.9)';R(c,46,120,4,16,'#E8E0C8');c.fillRect(47,114+Math.sin(st*9),2,5);R(c,270,120,4,16,'#E8E0C8');c.fillRect(271,114+Math.cos(st*8),2,5);return;}
+  inGrad(c,0,F.sea||F.lake?100:140,F.sky[0],F.sky[1]);
+  if(F.night){c.fillStyle='#E8E8F0';for(let i=0;i<40;i++){c.fillRect((i*73)%320,(i*37)%90,1,1);}c.fillStyle='#D8D8E0';c.beginPath();c.arc(250,30,8,0,7);c.fill();}
+  else if(!F.andes){c.fillStyle='rgba(255,230,170,.9)';c.beginPath();c.arc(n===5?250:70,92,12,0,7);c.fill();}
+  if(F.andes){c.fillStyle='#3A3550';c.beginPath();c.moveTo(0,140);[[30,70],[70,110],[110,50],[160,100],[200,60],[250,105],[290,65],[320,90],[320,140]].forEach(p=>c.lineTo(p[0],p[1]));c.fill();
+    c.fillStyle='#E8E8F0';[[110,50],[200,60],[290,65]].forEach(([x,y])=>{c.beginPath();c.moveTo(x-8,y+10);c.lineTo(x,y);c.lineTo(x+8,y+10);c.fill();});
+    R(c,0,140,VW,40,'#3B3024');for(let i=0;i<6;i++)R(c,40+i*42,128,30,12,'#4E4232');c.fillStyle='#D8D8E0';for(let i=0;i<30;i++)c.fillRect((i*97+i*i*13)%320,(i*41+i*i*7)%60,1,1);return;}
+  if(F.sea){R(c,0,100,VW,80,F.night?'#0C1428':'#2F6F9E');c.fillStyle=F.night?'#18243C':'#5A9AC4';for(let y=104;y<180;y+=6)for(let x=((y*7)%20)-((st*12)|0)%20;x<VW;x+=20)c.fillRect(x,y,8,1);}
+  if(F.lake){R(c,0,100,VW,80,'#5A6A70');c.fillStyle='#6E7E84';for(let y=104;y<180;y+=7)for(let x=(y*5)%24;x<VW;x+=24)c.fillRect(x,y,10,1);
+    c.fillStyle='#4A3A34';for(let i=0;i<9;i++)c.fillRect(70+i*20,84-(i%3)*4,14,16+(i%3)*4);c.fillRect(140,64,40,36);R(c,0,104,VW,3,'#5A4A40');
+    if(F.smoke){for(let i=0;i<5;i++){const x=90+i*34,ph=st*.6+i;c.fillStyle='rgba(60,55,60,'+(.45-i*.03)+')';for(let k=0;k<6;k++){c.beginPath();c.arc(x+Math.sin(ph+k)*6,80-k*12-(st*4%12),6+k*2,0,7);c.fill();}}}}
+  if(F.city==='lissabon'){c.fillStyle='#4A3530';for(let i=0;i<10;i++)c.fillRect(i*16,70+(i%4)*5,14,30-(i%4)*5);c.fillRect(50,52,10,20);}
+  if(F.city==='palos'){c.fillStyle='#3E3028';for(let i=0;i<6;i++)c.fillRect(i*18,80+(i%3)*4,16,20-(i%3)*4);c.fillRect(40,66,8,16);}
+  if(F.beach){R(c,0,140,VW,40,'#E3CF9A');c.fillStyle='#2E5A2E';[[20,140],[50,138],[290,142]].forEach(([x,y])=>{R(c,x,y-34,3,34,'#6B4A2A');for(let k=0;k<5;k++){c.beginPath();c.ellipse(x+1+Math.cos(k*1.3)*8,y-34+Math.sin(k*1.3)*3,9,2.5,k*1.3,0,7);c.fill();}});
+    c.drawImage(sprite({hair:'#1E1A16',skin:'#B57A4A',tunic:'#B57A4A',legs:'#D9C9A3'},'up',0),140,128);}
+  (F.ships||[]).forEach(s=>{const f=Math.min(1,st/4.5),x=s.x0+(s.x1-s.x0)*f,bob=Math.sin(st*2+s.x0)*1;rsShip(c,x,s.y+bob,s.s,s);});
+  if(st<.6){c.fillStyle='rgba(0,0,0,'+(1-st/.6)+')';c.fillRect(0,0,VW,VH);}}
+function rsDraw(){const c=wx;c.imageSmoothingEnabled=false;
+  if(RS.kind==='reise'){if(RS.ph===0)rsDrawFilm(c,RS.from,RS.st);else R(c,0,0,VW,VH,RS.ph===1?'#0E1A2E':'#2C1A0F');}
+  else rsDrawSchluss(c);}
+function rsWrap(t,maxW){const w=t.split(' '),L=[];let cur='';w.forEach(x=>{const tr=cur?cur+' '+x:x;if(ux.measureText(tr).width>maxW&&cur){L.push(cur);cur=x;}else cur=tr;});if(cur)L.push(cur);return L;}
+function drawReiseUI(){if(!RS)return;try{ux.textBaseline='alphabetic';
+  if(RS.kind==='schluss'){drawSchlussUI();}
+  else if(RS.ph===0){font(8,false);const L=rsWrap(RS_FILM[RS.from]?RS_FILM[RS.from].cap:'',280);inSub(L,166-(L.length-1)*11);}
+  else if(RS.ph===1){const img=worldArt(),sc=1.05,mw=img.width*sc,mx=(VW-mw)/2,my=34;ux.imageSmoothingEnabled=false;ux.drawImage(img,mx,my,mw,img.height*sc);
+    const A=RS_ORT[RS.from],B=RS_ORT[RS.to],ax=mx+(A[1]*2+1)*sc,ay=my+(A[2]*2+1)*sc,bx=mx+(B[1]*2+1)*sc,by=my+(B[2]*2+1)*sc,f=Math.min(1,RS.st/2.2);
+    ux.strokeStyle='#F2C14E';ux.lineWidth=1.4;ux.setLineDash([3,2]);ux.beginPath();ux.moveTo(ax,ay);const mxp=(ax+bx)/2,myp=Math.min(ay,by)-18;
+    for(let i=1;i<=24*f;i++){const u=i/24,x=(1-u)*(1-u)*ax+2*(1-u)*u*mxp+u*u*bx,y=(1-u)*(1-u)*ay+2*(1-u)*u*myp+u*u*by;ux.lineTo(x,y);}ux.stroke();ux.setLineDash([]);
+    const near=Math.hypot(ax-bx,ay-by)<14;[[ax,ay,A[0]],[bx,by,B[0]]].forEach(([x,y,n],i)=>{if(i===1&&f<1)return;if(i===0&&near&&f>=1)return;ux.fillStyle='rgba(242,193,78,.4)';ux.beginPath();ux.arc(x,y,Math.max(.1,4+Math.sin(RS.t*5)),0,7);ux.fill();ux.fillStyle='#F2C14E';ux.fillRect(x-1.5,y-1.5,3,3);font(6,true);ux.fillStyle='#FFF6DA';ux.fillText(n,x+5,y-3);});
+    ux.textAlign='center';font(7,false);ux.fillStyle='#A9B8CE';ux.fillText(RS_KAP[RS.to],VW/2,12);
+    fontD(18);ux.fillStyle='#F2C14E';const y=rsYear(),now=new Date().getFullYear();ux.fillText(RS.to===9&&RS.st>3.6?'heute':String(y===now&&RS.to===9?y:y),VW/2,29);
+    font(7,false);const L=rsWrap(RS_TXT[RS.from][0],290);ux.fillStyle='rgba(8,10,20,.75)';ux.fillRect(10,150-2,300,L.length*9+5);ux.fillStyle='#F3E6C6';L.forEach((l,i)=>ux.fillText(l,VW/2,155+i*9));ux.textAlign='left';}
+  else{const T=RS_TXT[RS.from],f=Math.min(1,RS.st/.6);ux.globalAlpha=f;ux.fillStyle='#F6ECD2';ux.fillRect(50,22,220,128);ux.strokeStyle='#8A6A44';ux.strokeRect(53,25,214,122);
+    ux.textAlign='center';font(7,false);ux.fillStyle='#8A6A44';ux.fillText('Am Rand der Seite, in brauner Tinte:',VW/2,42);
+    ux.font='italic 400 9px '+FONT;ux.fillStyle='#3A2716';const L=rsWrap(T[1],190);L.forEach((l,i)=>ux.fillText(l,VW/2,62+i*12));
+    font(7,true);ux.fillStyle='#8E2B1C';ux.fillText('J. W.',VW/2+60,64+L.length*12+8);font(6,false);ux.fillStyle='#8A6A44';ux.fillText(T[2],VW/2+60,64+L.length*12+17);
+    ux.globalAlpha=1;if(RS.st>1){font(7,true);ux.fillStyle=((RS.t*2|0)%2)?'#F2C14E':'#FFF6DA';ux.fillText('Leertaste: nächste Seite',VW/2,168);}ux.textAlign='left';}
+  font(6,false);ux.fillStyle='rgba(255,246,218,.75)';ux.textAlign='right';ux.fillText('Leertaste: weiter · Esc: überspringen · M: Ton '+(introMuted()?'an':'aus'),VW-6,VH-3);ux.textAlign='left';
+  }catch(e){console.error(e);rsEnd();}}
+// --- Schluss: zurück im Estrich ---
+function rsDrawSchluss(c){c.drawImage(inAtticArt(),0,0);const st=RS.st,ph=RS.ph;
+  c.fillStyle='rgba(190,215,255,.10)';c.beginPath();c.moveTo(198,58);c.lineTo(220,58);c.lineTo(214,150);c.lineTo(150,150);c.fill();
+  inChest(c,180,126,true);c.drawImage(sprite(plook(),'up',0),176,112);
+  if(ph>=1){c.drawImage(sprite({hair:'#D8D8D8',skin:'#E8C4A0',tunic:'#6B4E7A',legs:'#3A2E40'},'right',0),120,112);}
+  if(ph===0){for(let i=0;i<9;i++){const p=Math.min(1,Math.max(0,(st-.3-i*.25)/1.2)),a=-2+i*.5,x=195+Math.cos(a)*(1-p)*170,y=110+Math.sin(a)*(1-p)*120-(1-p)*20;if(p>=1)continue;c.save();c.translate(x,y);c.rotate((1-p)*6+i);R(c,-4,-5,8,10,'#F6ECD2');c.restore();}
+    if(st>2.6){c.fillStyle='rgba(255,215,120,'+Math.min(.4,(st-2.6)*.3)+')';c.beginPath();c.arc(195,118,Math.max(.1,26),0,7);c.fill();}}
+  if(st<.6&&ph===0){c.fillStyle='rgba(0,0,0,'+(1-st/.6)+')';c.fillRect(0,0,VW,VH);}}
+function drawSchlussUI(){const ph=RS.ph,st=RS.st;
+  if(ph===0)inSub(['Die neun Seiten fliegen zurück ins Buch.'],160);
+  if(ph===1)inSub(['«Du hast es gefunden», sagt deine Grossmutter.','«Das Logbuch gehörte Jakob Wenger.','Er war Schreiber im Segerhof am Blumenrain.»'],140);
+  if(ph===2){ux.fillStyle='rgba(20,12,6,.6)';ux.fillRect(0,0,VW,VH);ux.fillStyle='#F6ECD2';ux.fillRect(40,12,240,150);ux.strokeStyle='#8A6A44';ux.strokeRect(43,15,234,144);ux.textAlign='center';
+    ux.font='700 11px '+DISP;ux.fillStyle='#8E2B1C';ux.fillText('Die letzte Seite',VW/2,32);ux.font='italic 400 8.5px '+FONT;ux.fillStyle='#3A2716';
+    const L=['«Ich war nur ein Schreiber. Ich habe die Briefe kopiert,','die Ladelisten, die Rechnungen. Stoffe nach Afrika,','Menschen in die Karibik, Zucker nach Europa.','Und das Geld kam zurück nach Basel.','','Ich kann das nicht ändern. Aber ich kann es wissen.','Und wer das liest, weiss es jetzt auch.»'];
+    L.forEach((l,i)=>ux.fillText(l,VW/2,50+i*12));font(7,true);ux.fillStyle='#8E2B1C';ux.fillText('Jakob Wenger, Basel 1815',VW/2+40,142);ux.textAlign='left';}
+  if(ph===3){ux.fillStyle='rgba(10,8,6,.82)';ux.fillRect(0,0,VW,VH);ux.textAlign='center';fontD(15);ux.fillStyle='#F2C14E';ux.fillText('Das Logbuch ist vollständig.',VW/2,62);
+    font(8,false);ux.fillStyle='#F3E6C6';ux.fillText('Jetzt weisst du, was in diesem Buch steht.',VW/2,86);font(9,true);ux.fillStyle='#FFFFFF';ux.fillText('Was machst du damit?',VW/2,104);
+    font(6,false);ux.fillStyle='#A9B8CE';ux.fillText('Echt: der Segerhof, Christoph Burckhardt & Cie., die 21 Sklavenschiffe (1783–1815). Erfunden: Jakob Wenger.',VW/2,132);
+    if(st>1.5){font(7,true);ux.fillStyle=((RS.t*2|0)%2)?'#F2C14E':'#FFF6DA';ux.fillText('Leertaste: zur Urkunde',VW/2,152);}ux.textAlign='left';}}
 })();
 </script>
 </body></html>
