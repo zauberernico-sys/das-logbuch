@@ -163,9 +163,9 @@ input#code{font:800 26px var(--fd);letter-spacing:.2em;text-align:center;border:
 @media(prefers-reduced-motion:reduce){.edge.hint .eo{animation:none}}
 details summary{font:700 15px var(--fd);text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
 </style></head><body>
-<div id="overlay" hidden><div class="ogrid"><div><small>Spielnummer</small><b id="ocode">––––</b><span id="ohint">Wähle unten eine Runde. Dann erscheint die Spielnummer.</span>
-  <p id="olobby"></p><button id="ostart" style="display:none">Start für alle ▶</button>
-  <div class="obtn"><button id="o8">Runde starten: 8 Knoten</button><button id="o12">Runde starten: 12 Knoten</button><button id="o16">Profi: 16 Knoten</button><button id="oclose">Schliessen</button></div></div>
+<div id="overlay" hidden><div class="ogrid"><div><small>Spielnummer</small><b id="ocode">––––</b><span id="ohint"></span>
+  <p id="olobby"></p>
+  <div class="obtn"><button id="o8">Start: 8 Knoten ▶</button><button id="o12">Start: 12 Knoten ▶</button><button id="o16">Start Profi: 16 Knoten ▶</button><button id="oclose">Schliessen</button></div></div>
  <div class="opod"><small>Top 3 der Klasse</small><ol id="otop"></ol><p id="ototal"></p><p id="olive" class="off"></p><p id="ocount"></p>
   <form id="oform"><input id="oname" maxlength="18" placeholder="Firma" aria-label="Firma"><input id="opts" inputmode="numeric" maxlength="4" placeholder="Punkte" aria-label="Punkte"><button>Eintragen</button></form>
   <button class="link" id="oclear" type="button">Rangliste leeren</button></div></div></div>
@@ -275,48 +275,49 @@ const PIN="5068";let tcode=0;
 function win(){return Math.floor(Date.now()/300000)}
 function codeFor(w,n){let x=(Math.imul(w,2654435761)+n*40503+771919)>>>0;x=(x^(x>>>13))>>>0;x=Math.imul(x,0x5bd1e995)>>>0;x=(x^(x>>>15))>>>0;return 1000+(x%9000)}
 function checkCode(c){const w=win();for(const d of[0,-1,-2,1])for(const n of[8,12,16])if(codeFor(w+d,n)==c)return{n,w:w+d};return null}
-const RELAY="https://ntfy.sh/", topic=c=>"netzbau-ag-bs-"+c;
+const RELAY="https://ntfy.sh/", topic=c=>(window.__tp||"netzbau-ag-bs-")+c;
 let es=null, live=false, pollT=null, lastOk=0;
-let tmsgs=[];
-function tApply(){const c=tcode,st=roundState(tmsgs,c),mine=!myR[c]||st.r===myR[c];lobby[c]=mine?st.joins:new Set();started[c]=(mine&&st.started)||(!!sentStart[c]&&sentStart[c]===myR[c]);showLobby()}
+let tmsgs=[],curR={},sentR={};
+function lastStart(a,code){let l=null;(a||[]).forEach(o=>{if(o&&o.s&&parseInt(o.c,10)==code&&o.r)l={r:parseInt(o.r,10)||0,n:[8,12,16].includes(parseInt(o.n,10))?parseInt(o.n,10):8}});return l}
+function joinsOf(a,code){const j=new Set();(a||[]).forEach(o=>{if(o&&typeof o.j=="string"&&parseInt(o.c,10)==code){const f=o.j.trim().slice(0,18);if(f)j.add(f)}});return j}
+function tApply(){const c=tcode;lobby[c]=joinsOf(tmsgs,c);const l=lastStart(tmsgs,c);if(l&&!(sentR[c]&&!tmsgs.some(o=>o&&o.s&&o.r==sentR[c])))curR[c]=l.r;showLobby();showKlass()}
 function tMsg(o){if(!o)return;tmsgs.push(o);if(tmsgs.length>3000)tmsgs.shift();if(typeof o.f=="string")addKlass(o);else tApply()}
 function pollKlass(){const c=tcode;if($("overlay").hidden||!(c>=1000&&c<=9999))return;
   fetchLobby(c).then(a=>{if(c!=tcode)return;if(a===null){if(!es||es.readyState!=1)setLive(false,"Keine Live-Verbindung. Resultate von Hand eintragen.");return}lastOk=Date.now();tmsgs=a;a.forEach(o=>{if(o&&typeof o.f=="string")addKlass(o)});tApply();if(!es||es.readyState!=1)setLive(true,"Live: Resultate erscheinen alle paar Sekunden von selbst.")})}
-function addKlass(o){if(!o||typeof o.f!="string")return;const f=o.f.trim().slice(0,18),p=parseInt(o.p,10),c=parseInt(o.c,10);if(!f||!(p>=0&&p<=1000)||!(c>=1000&&c<=9999))return;
-  const i=prog.klass.findIndex(x=>x.f==f&&x.c==c);if(i>=0){if(prog.klass[i].p>=p)return;prog.klass[i].p=p}else prog.klass.push({f,p,c});prog.klass=prog.klass.slice(-300);save();showKlass()}
+function addKlass(o){if(!o||typeof o.f!="string")return;const f=o.f.trim().slice(0,18),p=parseInt(o.p,10),c=parseInt(o.c,10),r=parseInt(o.r,10)||0;if(!f||!(p>=0&&p<=1000)||!(c>=1000&&c<=9999))return;
+  const i=prog.klass.findIndex(x=>x.f==f&&x.c==c&&(x.r||0)==r);if(i>=0){if(prog.klass[i].p>=p)return;prog.klass[i].p=p}else prog.klass.push({f,p,c,r});prog.klass=prog.klass.slice(-400);save();showKlass()}
 function setLive(ok,txt){live=ok;const e=$("olive");e.textContent=txt;e.className=ok?"on":"off"}
 function listen(){if(es){es.close();es=null}tmsgs=[];if(pollT){clearInterval(pollT)}pollT=setInterval(()=>{if(!es||es.readyState!=1)pollKlass()},10000);const c=tcode;if(!(c>=1000&&c<=9999)){setLive(false,"");return}
   if(typeof EventSource=="undefined"){setLive(false,"Keine Live-Verbindung. Resultate von Hand eintragen.");return}
   setLive(false,"Verbinde ...");
   try{es=new EventSource(RELAY+topic(c)+"/sse?since=20m");
-    es.onopen=()=>{setLive(true,"Live: Resultate erscheinen von selbst.");if(onOpenOnce){const f=onOpenOnce;onOpenOnce=null;f()}};
+    es.onopen=()=>{setLive(true,"Live: Resultate erscheinen von selbst.");};
     es.onerror=()=>{if(Date.now()-lastOk>20000)setLive(false,"Verbinde ...");pollKlass()};
     es.onmessage=ev=>{try{const m=JSON.parse(ev.data);if(m.event&&m.event!="message")return;tMsg(JSON.parse(m.message))}catch(e){}}}
   catch(e){setLive(false,"Keine Live-Verbindung. Resultate von Hand eintragen.")}}
-function sendScore(c,pts){const o={f:prog.firma||"Firma ohne Namen",p:pts,c};
+function sendScore(c,pts,r){const o={f:prog.firma||"Firma ohne Namen",p:pts,c,r:r||0};
   return send(c,o).then(ok=>ok||new Promise(res=>setTimeout(()=>send(c,o).then(res),9000)))}
 function fetchTop(c){try{return fetch(RELAY+topic(c)+"/json?poll=1&since=20m").then(r=>r.ok?r.text():"").then(t=>{const best={};t.split("\n").forEach(l=>{try{const m=JSON.parse(l);if(m.event!="message")return;const o=JSON.parse(m.message),p=parseInt(o.p,10);if(typeof o.f=="string"&&p>=0&&p<=1000&&parseInt(o.c,10)==c){const f=o.f.trim().slice(0,18);if(!(best[f]>=p))best[f]=p}}catch(e){}});
     return Object.entries(best).map(([f,p])=>({f,p})).sort((a,b)=>b.p-a.p)}).catch(()=>null)}catch(e){return Promise.resolve(null)}}
-function topFrom(a,c){const best={};(a||[]).forEach(o=>{if(!o||typeof o.f!="string"||parseInt(o.c,10)!=c)return;const p=parseInt(o.p,10),f=o.f.trim().slice(0,18);if(f&&p>=0&&p<=1000&&!(best[f]>=p))best[f]=p});return Object.entries(best).map(([f,p])=>({f,p})).sort((a,b)=>b.p-a.p)}
-function showClassTop(c){if(wes&&kcode==c){drawTop(c,topFrom(kmsgs,c));return}fetchTop(c).then(t=>drawTop(c,t))}
+function topFrom(a,c,r){const best={};(a||[]).forEach(o=>{if(!o||typeof o.f!="string"||parseInt(o.c,10)!=c||(parseInt(o.r,10)||0)!=(r||0))return;const p=parseInt(o.p,10),f=o.f.trim().slice(0,18);if(f&&p>=0&&p<=1000&&!(best[f]>=p))best[f]=p});return Object.entries(best).map(([f,p])=>({f,p})).sort((a,b)=>b.p-a.p)}
+function showClassTop(c){if(wes&&kcode==c){drawTop(c,topFrom(kmsgs,c,duel?duel.r:0));return}fetchTop(c).then(t=>drawTop(c,t))}
 function drawTop(c,t){const box=$("ctop");if(!t||!t.length){box.textContent="";return}
   box.innerHTML="<b>Klasse, Spiel "+c+":</b> ";t.slice(0,3).forEach((x,i)=>{const sp=document.createElement("span");sp.textContent=(i+1)+". "+x.f+" "+x.p+(i<Math.min(t.length,3)-1?" · ":"");box.appendChild(sp)});
   const me=t.findIndex(x=>x.f==(prog.firma||"Firma ohne Namen"));if(me>=0){const sp=document.createElement("span");sp.textContent=" · Euer Rang: "+(me+1)+" von "+t.length;box.appendChild(sp)}}
-let lobby={},started={},myR={},sentStart={},waitT=null,wes=null;
-function roundState(a,code){const st={joins:new Set(),started:false,r:0};(a||[]).forEach(o=>{if(!o||parseInt(o.c,10)!=code)return;if(o.r){st.joins=new Set();st.started=false;st.r=parseInt(o.r,10)||0}if(typeof o.j=="string"){const f=o.j.trim().slice(0,18);if(f)st.joins.add(f)}if(o.s){st.started=true;if(o.r)st.r=parseInt(o.r,10)||st.r}});return st}
-function showLobby(){const c=tcode,l=lobby[c]?[...lobby[c]]:[];$("olobby").textContent=c?(l.length?l.length+(l.length==1?" Firma":" Firmen")+" bereit: "+l.join(", "):"Noch keine Firma angemeldet."):"";
-  const b=$("ostart");b.style.display=c?"":"none";b.disabled=!!started[c];b.textContent=started[c]?"Runde läuft":"Start für alle ▶"}
+let lobby={},waitT=null,wes=null;
+function showLobby(){const c=tcode,l=lobby[c]?[...lobby[c]]:[];$("olobby").textContent=c?(l.length?l.length+(l.length==1?" Firma":" Firmen")+" bereit: "+l.join(", "):"Noch keine Firma angemeldet."):""}
 function tmo(ms){try{const a=new AbortController();setTimeout(()=>a.abort(),ms);return{signal:a.signal}}catch(e){return{}}}
 function fetchLobby(c){try{return fetch(RELAY+topic(c)+"/json?poll=1&since=20m",{cache:"no-store",...tmo(4000)}).then(r=>r.ok?r.text():null).then(t=>{if(t===null)return null;const out=[];t.split("\n").forEach(l=>{try{const m=JSON.parse(l);if(m.event=="message")out.push(JSON.parse(m.message))}catch(e){}});return out}).catch(()=>null)}catch(e){return Promise.resolve(null)}}
 function send(c,o){try{return fetch(RELAY+topic(c),{method:"POST",body:JSON.stringify(o),...tmo(4000)}).then(r=>r.ok).catch(()=>false)}catch(e){return Promise.resolve(false)}}
-let kmsgs=[],kcode=0,onT=null;
+let kmsgs=[],kcode=0,onT=null,played={};
 function stopWait(){if(waitT){clearTimeout(waitT);waitT=null}}
 function closeK(){stopWait();clearTimeout(onT);if(wes){try{wes.close()}catch(e){}wes=null}kmsgs=[];kcode=0}
-function waitDuel(code,n){closeK();kcode=code;let go=false,joinedR=-1,opened=false;const K="Klassenduell · Spiel "+code,stop=()=>{closeK();pclose()},begin=r=>{if(go)return;go=true;stopWait();beginDuel(code,n,r||0)};
-  const manual=()=>{if(go||kcode!=code)return;card({k:K,t:"Bereit",p:"Keine Verbindung zum Spielserver. Wartet, bis die Lehrperson «Los» sagt, und klickt dann auf «Jetzt starten».",sm:1,a:["Abbrechen",stop],b:["Jetzt starten",()=>begin(0)]})};
-  card({k:K,t:"Bereit",p:"«"+prog.firma+"» ist angemeldet. Es geht los, sobald die Lehrperson startet. Alle bekommen dasselbe Netz.",sm:1,a:["Abbrechen",stop],b:["",null]});
-  const join=(r,k)=>{if(joinedR===r&&!k)return;joinedR=r;send(code,{j:prog.firma,c:code}).then(ok=>{if(ok||go||kcode!=code)return;if(!opened)manual();else if((k||0)<3)setTimeout(()=>{if(!go&&kcode==code)join(r,(k||0)+1)},12000)})};
-  const on=()=>{if(kcode!=code)return;if(go){if(done&&duel&&duel.code==code)drawTop(code,topFrom(kmsgs,code));return}const st=roundState(kmsgs,code);if(st.started)begin(st.r);else join(st.r)};
+function waitDuel(code,n0){closeK();kcode=code;let joined=false,opened=false,man=false;const K="Klassenduell · Spiel "+code,stop=()=>{closeK();pclose()};
+  const begin=(n,r)=>{stopWait();played[code]=r;beginDuel(code,n,r||0)};
+  const manual=()=>{if(kcode!=code||man)return;man=true;card({k:K,t:"Bereit",p:"Keine Verbindung zum Spielserver. Wartet, bis die Lehrperson «Los» sagt, und klickt dann auf «Jetzt starten».",sm:1,a:["Abbrechen",stop],b:["Jetzt starten",()=>begin(n0,0)]})};
+  card({k:K,t:"Bereit",p:"«"+prog.firma+"» ist angemeldet. Es geht los, sobald die Lehrperson die Runde startet. Alle bekommen dasselbe Netz.",sm:1,a:["Abbrechen",stop],b:["",null]});
+  const join=k=>{joined=true;send(code,{j:prog.firma,c:code}).then(ok=>{if(ok||kcode!=code)return;if(!opened)manual();else if((k||0)<3)setTimeout(()=>{if(kcode==code)join((k||0)+1)},12000)})};
+  const on=()=>{if(kcode!=code)return;const l=lastStart(kmsgs,code);if(l&&played[code]!==l.r){begin(l.n,l.r);return}if(!joined)join(0);if(done&&duel&&duel.code==code)drawTop(code,topFrom(kmsgs,code,duel.r))};
   waitT=setTimeout(()=>{if(!opened)manual()},6000);
   if(typeof EventSource=="undefined"){manual();return}
   try{wes=new EventSource(RELAY+topic(code)+"/sse?since=20m");wes.onopen=()=>{opened=true;clearTimeout(onT);onT=setTimeout(on,1200)};
@@ -330,18 +331,18 @@ function startDuel(){$("ctop").textContent="";let code=parseInt($("code").value,
   waitDuel(code,chk.n)}
 function beginDuel(code,n,rr){stopWait();pclose();probe=false;
   career=null;mara=null;rep_=null;mode="prim";R=seeded(code*10+n+((rr||0)%100000)*100);net=randomNet(4,n==8?2:n==12?3:4,12,"Wettkampf");const r=R;R=Math.random;
-  duel={code,n,rivals:FIRMS.map((f,i)=>({f,p:Math.round((n==8?560:n==12?430:320)+i*90+r()*70)}))};start()}
+  duel={code,n,r:rr||0,rivals:FIRMS.map((f,i)=>({f,p:Math.round((n==8?560:n==12?430:320)+i*90+r()*70)}))};$("ctop").textContent="";start()}
 function showRank(me){const box=$("rank");if(!duel){closeK();box.innerHTML="";return}
   const rows=duel.rivals.map(x=>({f:x.f,p:x.p})).concat(me!=null?[{f:prog.firma||"Deine Firma",p:me,me:true}]:[]).sort((a,b)=>b.p-a.p);
   box.innerHTML="<table><thead><tr><th>Rang</th><th>Firma</th><th>Punkte</th></tr></thead><tbody></tbody></table>";
   rows.forEach((x,i)=>{const r=box.querySelector("tbody").insertRow();if(x.me)r.className="me";r.insertCell().textContent=i+1;r.insertCell().textContent=x.f;r.insertCell().textContent=x.p});return rows.findIndex(x=>x.me)+1}
 function showBest(){const b=prog.duels.slice().sort((a,b)=>b.p-a.p).slice(0,3);$("mybest").textContent=b.length?"Eure drei besten Wettkämpfe: "+b.map(x=>x.p+" (Code "+x.c+")").join(" · "):""}
-function showKlass(){const cc=tcode,t=prog.klass.filter(x=>x.c==cc).sort((a,b)=>b.p-a.p),o=$("otop");o.innerHTML="";
-  const sum={};prog.klass.forEach(x=>{sum[x.f]=(sum[x.f]||0)+x.p});const rounds=new Set(prog.klass.map(x=>x.c)).size,tot=Object.entries(sum).sort((a,b)=>b[1]-a[1]).slice(0,3);
+function showKlass(){const cc=tcode,rr=curR[cc]||0,t=prog.klass.filter(x=>x.c==cc&&(x.r||0)==rr).sort((a,b)=>b.p-a.p),o=$("otop");o.innerHTML="";
+  const sum={};prog.klass.forEach(x=>{sum[x.f]=(sum[x.f]||0)+x.p});const rounds=new Set(prog.klass.map(x=>x.c+"-"+(x.r||0))).size,tot=Object.entries(sum).sort((a,b)=>b[1]-a[1]).slice(0,3);
   $("ototal").textContent=rounds>1?"Gesamtwertung über "+rounds+" Runden: "+tot.map((x,i)=>(i+1)+". "+x[0]+" "+x[1]).join(" · "):"";
-  if(!t.length){const li=document.createElement("li");li.className="leer";li.textContent="Noch keine Resultate. Firma und Punkte unten eintragen.";o.appendChild(li)}
+  if(!t.length){const li=document.createElement("li");li.className="leer";li.textContent="Noch keine Resultate in dieser Runde.";o.appendChild(li)}
   t.slice(0,3).forEach((x,i)=>{const li=document.createElement("li"),n=document.createElement("i"),f=document.createElement("span"),p=document.createElement("span");n.textContent=i+1;f.textContent=x.f;p.textContent=x.p;li.append(n,f,p);o.appendChild(li)});
-  $("ocount").textContent=t.length?t.length+" Firmen in dieser Runde":""}
+  $("ocount").textContent=t.length?t.length+(t.length==1?" Firma hat":" Firmen haben")+" diese Runde fertig":""}
 function showTimer(){const t=$("timer");const L=career!=null?LEVELS[career]:null;if(!L||!L.time){t.hidden=true;return}
   t.hidden=false;t.textContent=timedOut?"0":timeLeft;t.className=timeLeft<=20?"low":""}
 function cheapest(){const cs=candidates();if(!cs.length)return null;return cs.reduce((m,e)=>e[2]<m[2]?e:m)}
@@ -445,7 +446,7 @@ function clickEdge(e){
     if(mara){mara.score++;mara.round++;if(mara.score>prog.best){prog.best=mara.score;save()}
       say("Geschafft! Offerte "+cost+". Gelöst im Marathon: "+mara.score+". Das nächste Netz wird "+(mara.round<MSIZE.length?"grösser.":"wieder 24 Knoten haben."),"win")}
     else if(duel){const sec=Math.round((Date.now()-t0)/1000),pts=Math.max(0,1000-4*sec-80*errors),rk=showRank(pts);prog.duels.push({c:duel.code,p:pts});prog.duels=prog.duels.slice(-30);save();showBest();
-      const dc=duel.code;sendScore(dc,pts).then(ok=>{if(duel&&duel.code==dc&&done){say($("msg").textContent+(ok?" Euer Resultat ist am Beamer.":" Senden ging nicht: Meldet es der Lehrperson."),"win")}if(ok)setTimeout(()=>showClassTop(dc),2500)});
+      const dc=duel.code;sendScore(dc,pts,duel.r).then(ok=>{if(duel&&duel.code==dc&&done){say($("msg").textContent+(ok?" Euer Resultat ist am Beamer.":" Senden ging nicht: Meldet es der Lehrperson."),"win")}if(ok)setTimeout(()=>showClassTop(dc),2500)});
       say("Offerte "+cost+" in "+sec+" Sekunden, Fehler: "+errors+". Das gibt "+pts+" Punkte und Rang "+rk+" von 4. Firma: "+(prog.firma||"ohne Namen")+".","win")}
     else if(career!=null){
       lastStars=timedOut?1:(errors==0&&!tipUsed?3:(errors<=2?2:1));
@@ -511,20 +512,19 @@ $("bhear").onclick=()=>{if(career!=null)hear(career)};
 $("vAuftrag").onclick=()=>playVid("auftrag");$("vRegel").onclick=()=>playVid("regel");
 $("vclose").onclick=()=>{const v=$("vid");v.pause();v.removeAttribute("src");v.load();$("vmodal").hidden=true};
 $("bMara").onclick=startMara;$("bRep").onclick=startRep;
-function openBeamer(){$("pinrow").hidden=true;$("pin").value="";showKlass();$("overlay").hidden=false;listen()}
-let onOpenOnce=null;
-function newRound(n){tcode=codeFor(win(),n);const c=tcode;$("ocode").textContent="····";$("ohint").textContent="Die Runde wird vorbereitet ...";const t=new Date((win()+2)*300000);
-  lobby[c]=new Set();started[c]=false;sentStart[c]=0;myR[c]=1+Math.floor(Math.random()*99999);showKlass();showLobby();listen();
-  let sent=false;const go=()=>{if(sent||c!=tcode)return;sent=true;send(c,{r:myR[c],c}).then(ok=>{if(!ok){myR[c]=0;tApply()}});
-    setTimeout(()=>{if(c!=tcode)return;$("ocode").textContent=c;$("ohint").textContent="Nummer eintippen und «Beitreten» klicken. Wenn alle bereit sind: «Start für alle» · "+n+" Knoten · gültig bis "+String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0")+" Uhr"},2500)};
-  onOpenOnce=go;setTimeout(go,3000)}
-$("ostart").onclick=()=>{const c=tcode;if(!c||started[c])return;started[c]=true;sentStart[c]=myR[c];showLobby();send(c,{s:1,c,r:myR[c]||0}).then(ok=>{$("ohint").textContent=ok?"Runde läuft. Die Resultate erscheinen rechts.":"Keine Verbindung: Sage laut «Los». Die Kinder klicken dann auf «Jetzt starten»."})};
+function hhmm(t){return String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0")}
+function openBeamer(){$("pinrow").hidden=true;$("pin").value="";let ck=tcode?checkCode(tcode):null;if(!ck){tcode=codeFor(win(),8);ck={w:win()}}
+  $("ocode").textContent=tcode;$("ohint").textContent="Nummer eintippen und «Beitreten» klicken · gültig bis "+hhmm(new Date((ck.w+2)*300000))+" Uhr. Wenn alle bereit sind, unten eine Runde starten.";
+  showKlass();showLobby();$("overlay").hidden=false;listen()}
+function startRound(n){const c=tcode;if(!c)return;const r=1+Math.floor(Math.random()*99999);curR[c]=r;sentR[c]=r;showKlass();
+  let tries=0;const OK="Runde läuft: "+n+" Knoten. Die Resultate erscheinen rechts. Für die nächste Runde einfach wieder starten, die Firmen bleiben angemeldet.";
+  const go=()=>{if(sentR[c]!==r)return;send(c,{s:1,c,n,r}).then(ok=>{if(sentR[c]!==r)return;if(ok){$("ohint").textContent=OK}else if(++tries<12){$("ohint").textContent="Start wird gesendet ... Versuch "+(tries+1);setTimeout(go,4000)}else $("ohint").textContent="Keine Verbindung. Schliesse dieses Fenster und starte das Duell neu, oder trage die Punkte von Hand ein."})};go()}
 $("lehr").onclick=()=>{$("pinrow").hidden=!$("pinrow").hidden;if(!$("pinrow").hidden)$("pin").focus()};
 $("pingo").onclick=()=>{if($("pin").value===PIN)openBeamer();else{$("pin").value="";say("Falsche PIN. Dieser Bereich ist für die Lehrperson.","bad")}};
 $("pin").addEventListener("keydown",ev=>{if(ev.key=="Enter")$("pingo").click()});
-$("o8").onclick=()=>newRound(8);$("o12").onclick=()=>newRound(12);$("o16").onclick=()=>newRound(16);
+$("o8").onclick=()=>startRound(8);$("o12").onclick=()=>startRound(12);$("o16").onclick=()=>startRound(16);
 $("oclose").onclick=()=>{$("overlay").hidden=true;if(es){es.close();es=null}if(pollT){clearInterval(pollT);pollT=null}};
-$("oform").addEventListener("submit",ev=>{ev.preventDefault();const f=$("oname").value.trim(),p=parseInt($("opts").value,10);const c=tcode;if(!f||!(p>=0&&p<=1000)||!c)return;addKlass({f,p,c});$("oname").value="";$("opts").value="";showKlass();$("oname").focus()});
+$("oform").addEventListener("submit",ev=>{ev.preventDefault();const f=$("oname").value.trim(),p=parseInt($("opts").value,10);const c=tcode;if(!f||!(p>=0&&p<=1000)||!c)return;addKlass({f,p,c,r:curR[c]||0});$("oname").value="";$("opts").value="";showKlass();$("oname").focus()});
 $("oclear").onclick=()=>{prog.klass=[];save();showKlass()};
 $("firma").value=prog.firma;$("firma").addEventListener("input",()=>{prog.firma=$("firma").value.trim();save()});showBest();
 $("join").onclick=()=>startDuel();$("code").addEventListener("keydown",ev=>{if(ev.key=="Enter")startDuel()});
