@@ -23,6 +23,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:18px;padding:18p
 .card{background:#fff;border-radius:8px;padding:16px}
 .stage{display:grid;gap:10px;align-content:start}
 #msg{font-size:19px;font-weight:700;min-height:2.8em;padding:10px 14px;border-radius:8px;background:var(--bg);border-left:0}
+#next2{width:100%;font-size:20px;padding:14px;margin:8px 0 2px;animation:n2 1.1s ease-in-out 3}#next2[hidden]{display:none}@keyframes n2{50%{transform:scale(1.02);box-shadow:0 0 0 5px rgba(255,196,0,.45)}}
 #msg.ok{background:#DFF3E7}#msg.bad{background:#FBE0E1}#msg.win{background:var(--on)}
 svg#net{width:100%;height:auto;max-height:58vh;display:block;touch-action:manipulation}
 .eo{stroke:var(--ink);stroke-width:15;stroke-linecap:round}
@@ -171,6 +172,7 @@ details summary{font:700 15px var(--fd);text-transform:uppercase;letter-spacing:
 <main>
 <section class="stage card">
  <div class="top"><div id="msg" role="status" aria-live="polite"></div><div id="timer" hidden></div></div>
+ <button id="next2" class="pri" hidden>Gut gemacht! Weiter zum nächsten Netz ▶</button>
  <button id="bhear" hidden>▶ Auftrag anhören</button>
  <svg id="net" xmlns="http://www.w3.org/2000/svg"></svg>
  <div class="legend"><span><i style="background:#fff"></i>möglich</span><span><i style="background:#12733E"></i>Kandidat</span><span><i style="background:#FFC400"></i>gebaut</span><span><i style="background:#E3262E"></i>verboten</span></div>
@@ -374,6 +376,7 @@ function draw(){
   $("bhear").hidden=career==null;$("check").hidden=mode!="free";$("helpwrap").style.display=mode=="prim"&&career==null?"":"none";
   $("tip").disabled=mode!="prim"||done||inNet.size==0||!!duel||!!mara;maraInfo();
   $("next").hidden=!((career!=null||mara||mode=="repair")&&done)||(mara&&mara.lives<=0);
+  const n2=$("next2"),was=n2.hidden;n2.hidden=$("next").hidden;if(was&&!n2.hidden){try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}}
   $("modehint").textContent=mode=="repair"?"Reklamation: zuerst die falsche Leitung anklicken, dann die richtige.":mode=="prim"?"Klicke zuerst einen Startknoten an, dann Schritt für Schritt den günstigsten Kandidaten.":"Baue ein Netz, wie du willst. Ein Klick baut eine Leitung, ein zweiter entfernt sie. Dann «Offerte prüfen».";
 }
 function say(t,c){const m=$("msg");m.textContent=t;m.className=c||""}
@@ -439,6 +442,7 @@ const pick=$("pick");for(const[k,n]of Object.entries(NETS)){const o=document.cre
 pick.addEventListener("change",()=>load(NETS[pick.value]));
 $("tip").onclick=()=>{const c=cheapest();if(!c||done)return;tipUsed=true;hintKey=key(c[0],c[1]);say("Tipp: Die blau blinkende Leitung ist der günstigste Kandidat. Überlege, warum.");draw()};
 $("next").onclick=()=>{if(mode=="repair")startRep();else if(mara){if(mara.lives>0)maraNet()}else if(career!=null)startLevel(career)};
+$("next2").onclick=()=>$("next").onclick();
 let pnext=null,pA=null;
 $("pgo").onclick=()=>{if(pnext)pnext()};$("phear").onclick=()=>{if(pA)pA()};$("pskip").onclick=()=>{prog.seen=true;save();pclose()};
 function pclear(){const v=$("pvid");try{v.pause()}catch(e){}v.removeAttribute("src");try{v.load()}catch(e){}v.style.display="none";$("pnet").style.display="none";$("pnet").innerHTML="";quiet()}
