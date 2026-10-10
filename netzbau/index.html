@@ -184,7 +184,7 @@ details summary{font:700 15px var(--fd);text-transform:uppercase;letter-spacing:
   <div class="camp" id="camp"></div>
   <div class="lv" id="levels"></div>
   <p class="hint">Für jedes gelöste Netz gibt es bis zu drei Sterne. Mit sechs Sternen wirst du befördert.</p>
-  <button class="link" id="unlock">Alle Stufen freischalten</button></div>
+  <button class="link" id="unlock">Alle Stufen freischalten</button><button class="link" id="wipe" style="margin-left:16px">Alles von vorne starten</button></div>
  <div class="card"><details id="duelbox"><summary>Klassenduell: Firma gegen Firma</summary>
   <p class="hint">Das Duell startet die Lehrperson. Die Spielnummer steht dann am Beamer. Bis dahin: Kampagne!</p>
   <input id="firma" maxlength="18" placeholder="Name eurer Firma" aria-label="Name eurer Firma">
@@ -481,6 +481,8 @@ $("oclear").onclick=()=>{prog.klass=[];save();showKlass()};
 $("firma").value=prog.firma;$("firma").addEventListener("input",()=>{prog.firma=$("firma").value.trim();save()});showBest();
 $("join").onclick=()=>startDuel();$("code").addEventListener("keydown",ev=>{if(ev.key=="Enter")startDuel()});
 $("unlock").onclick=()=>{prog.all=!prog.all;save();draw()};
+let rsT=null;$("wipe").onclick=()=>{const b=$("wipe");if(!rsT){b.textContent="Wirklich? Alle Sterne werden gelöscht. Nochmals klicken.";rsT=setTimeout(()=>{rsT=null;b.textContent="Alles von vorne starten"},5000);return}
+  clearTimeout(rsT);try{localStorage.removeItem("netzbau-prim")}catch(e){}location.reload()};
 $("mPrim").onclick=()=>setMode("prim");$("mFree").onclick=()=>setMode("free");
 $("reset").onclick=()=>{if(mode=="repair")startRep();else if(mara)startMara();else start()};$("check").onclick=check;$("help").onchange=draw;
 window.__t={get net(){return net},get built(){return built},get done(){return done},get errors(){return errors},get prog(){return prog},get stars(){return lastStars},get duel(){return duel},codeFor,win,checkCode,get mara(){return mara},get rep(){return rep_},candidates,cheapest,mstCost,randomNet};
