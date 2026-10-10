@@ -233,7 +233,8 @@ function drawLevels(){const box=$("levels");box.innerHTML="";LEVELS.forEach((L,i
   $("camp").innerHTML=LEVELS.map((L,i)=>`<span class="${prog.stars[i]>=NEED?"done":""}${career===i?" cur":""}" title="${L.name}"><i></i></span>`).join("");
   $("unlock").textContent=prog.all?"Stufen wieder sperren":"Alle Stufen freischalten";
   $("sDone").textContent=prog.stars.reduce((a,b)=>a+b,0)}
-function startLevel(i){duel=null;mara=null;rep_=null;showRank(null);career=i;const L=LEVELS[i];mode="prim";$("mPrim").setAttribute("aria-pressed",true);$("mFree").setAttribute("aria-pressed",false);
+let probe=false;
+function startLevel(i){probe=false;duel=null;mara=null;rep_=null;showRank(null);career=i;const L=LEVELS[i];mode="prim";$("mPrim").setAttribute("aria-pressed",true);$("mFree").setAttribute("aria-pressed",false);
   net=randomNet(L.c,L.r,L.w,L.name);start()}
 function stopTimer(){if(tick){clearInterval(tick);tick=null}}
 const MSIZE=[[3,2],[4,2],[3,3],[4,3],[4,3],[4,4],[5,4],[6,4]];
@@ -388,7 +389,7 @@ function bad(e,t){errors++;flash=key(e[0],e[1]);
   if(mara&&mode=="prim"){mara.lives--;if(mara.lives<=0){done=true;stopTimer();const rec=mara.score>prog.best;if(rec){prog.best=mara.score;save()}
     say(t+" Das war das dritte Leben. Marathon beendet nach "+mara.score+" Netzen."+(rec?" Neuer Rekord!":" Dein Rekord: "+prog.best+".")+" Klicke auf «Marathon» für einen neuen Versuch.","bad");draw();return}
     t+=" Noch "+mara.lives+" Leben."}
-  if(career!=null&&LEVELS[career].auto&&inNet.size>0){const c=cheapest();if(c){hintKey=key(c[0],c[1]);t+=" Die blau blinkende Leitung ist die richtige."}}
+  if((probe&&net===NETS.a1||career!=null&&LEVELS[career].auto)&&inNet.size>0){const c=cheapest();if(c){hintKey=key(c[0],c[1]);t+=" Die blau blinkende Leitung ist die richtige."}}
   say(t,"bad");draw();const f=flash;setTimeout(()=>{if(flash==f){flash=null;draw()}},1100)}
 function clickEdge(e){
   if(done)return;const[a,b,c]=e;
@@ -419,6 +420,7 @@ function clickEdge(e){
         if(last)card({k:"Kampagne abgeschlossen",t:"Legende",p:"Du hast alle acht Stufen geschafft. Die Netzbau AG gehört jetzt dir. Marathon und Reklamationen warten.",aud:8,a:["▶ Anhören",()=>hear(8)],b:["Weiter",pclose]});
         else brief(career+1,true);t+=" Befördert!"}
       say(t,"win")}
+    else if(probe&&net===NETS.a1){probe=false;say("Offerte "+cost+": Der Campingplatz ist am Netz. Probeauftrag bestanden.","win");brief(0,false,"Probeauftrag bestanden")}
     else say("Fertig! Offerte: "+cost+". Das ist das günstigste Netz. "+(errors==0?"Kein einziger Fehler.":"Fehler unterwegs: "+errors+"."),"win")}
   else say("Gebaut: "+(ia?a:b)+"–"+(ia?b:a)+" ("+c+"). Weiter mit dem nächsten günstigsten Kandidaten.","ok");
   draw();
@@ -444,20 +446,23 @@ function pclose(){pclear();$("promo").hidden=true}
 function card(o){pclear();const P=$("promo");P.className=o.vid?"v":o.net?"n":"";$("pk").textContent=o.k;$("pt").textContent=o.t;$("pp").textContent=o.p||"";
   $("phear").textContent=o.a[0];pA=o.a[1];$("phear").style.display=o.a[0]?"":"none";$("pgo").textContent=o.b[0];pnext=o.b[1];$("pskip").style.display=o.skip?"":"none";
   if(o.vid){const v=$("pvid");v.style.display="";v.muted=!sound;v.src="data:video/mp4;base64,"+VIDS[o.vid];const p=v.play();if(p&&p.catch)p.catch(()=>{})}
-  if(o.net)mini(o.net);P.hidden=false;P.scrollTop=0;if(o.aud!=null&&sound)hear(o.aud)}
+  if(o.net)mini(o.net,o.plain);P.hidden=false;P.scrollTop=0;if(o.aud!=null&&sound)hear(o.aud)}
 function primOrder(N){const s=new Set([N.start]),o=[],n=Object.keys(N.nodes).length;while(s.size<n){let b=null;for(const e of N.edges)if(s.has(e[0])!=s.has(e[1])&&(!b||e[2]<b[2]))b=e;if(!b)break;o.push(b);s.add(b[0]);s.add(b[1])}return o}
-function mini(N){const s=$("pnet");s.style.display="";const v=Object.values(N.nodes),W=Math.max(...v.map(n=>n[1]))*50+60,H=Math.max(...v.map(n=>n[2]))*50+60;s.setAttribute("viewBox",`0 0 ${W} ${H}`);
+function mini(N,plain){const s=$("pnet");s.style.display="";const v=Object.values(N.nodes),W=Math.max(...v.map(n=>n[1]))*50+60,H=Math.max(...v.map(n=>n[2]))*50+60;s.setAttribute("viewBox",`0 0 ${W} ${H}`);
   const p=k=>[N.nodes[k][1]*50+30,N.nodes[k][2]*50+30];
   const ln=(e,c,d)=>{const[x1,y1]=p(e[0]),[x2,y2]=p(e[1]);const l=el("line",{x1,y1,x2,y2,class:c},s);if(d!=null)l.style.animationDelay=d+"s"};
-  N.edges.forEach(e=>ln(e,""));const o=primOrder(N),step=Math.min(.5,6/o.length);o.forEach((e,i)=>ln(e,"g",.6+i*step));
+  N.edges.forEach(e=>ln(e,""));const o=plain?[]:primOrder(N),step=Math.min(.5,6/o.length);o.forEach((e,i)=>ln(e,"g",.6+i*step));
   for(const k in N.nodes){const[x,y]=p(k);el("circle",{cx:x,cy:y,r:11},s)}}
-function brief(i,promoted){const L=LEVELS[i];card({k:promoted?"Befördert":"Auftrag "+(i+1)+" von "+LEVELS.length,t:L.name,p:"Neuer Auftrag: «"+L.kunde+"». "+L.brief,net:randomNet(L.c,L.r,L.w,""),aud:i,
+function brief(i,promoted,kk){const L=LEVELS[i];card({k:kk?kk+" · Auftrag 1 von "+LEVELS.length:promoted?"Befördert":"Auftrag "+(i+1)+" von "+LEVELS.length,t:L.name,p:"Neuer Auftrag: «"+L.kunde+"». "+L.brief,net:randomNet(L.c,L.r,L.w,""),aud:i,
   a:["▶ Anhören",()=>hear(i)],b:["Auftrag annehmen",()=>{prog.seen=true;save();pclose();startLevel(i)}]})}
 function setSound(b){sound=b;prog.sound=b;save();sndUI()}
 function intro(n){
   if(n==0)card({k:"Willkommen bei der",t:"Netzbau AG",p:"Du beginnst heute deine Lehre und arbeitest dich Auftrag für Auftrag hoch bis zur Legende. Stecke jetzt deine Kopfhörer ein und klicke auf «Mit Ton starten».",a:["Ohne Ton starten",()=>{setSound(false);intro(1)}],b:["Mit Ton starten",()=>{setSound(true);intro(1)}],skip:1});
   else if(n==1)card({k:"Film 1 von 2",t:"Der Auftrag",p:sound?"":"Du hast «Ohne Ton» gewählt. Den Ton schaltest du oben rechts jederzeit ein.",vid:"auftrag",a:["",null],b:["Weiter",()=>intro(2)],skip:1});
-  else card({k:"Film 2 von 2",t:"Die Regel",p:"Diese Regel brauchst du bei jedem Auftrag. Das Video findest du jederzeit oben rechts.",vid:"regel",a:["",null],b:["Weiter",()=>brief(0)],skip:1})}
+  else if(n==3)card({k:"Probeauftrag",t:"Campingplatz",p:"Jetzt bist du dran: Baue das Netz für den Campingplatz aus dem Film. Die grünen Leitungen sind deine Kandidaten. Nach einem Fehler blinkt die günstigste blau.",net:NETS.a1,plain:1,a:["",null],b:["Los gehts",startProbe],skip:1});
+  else card({k:"Film 2 von 2",t:"Die Regel",p:"Diese Regel brauchst du bei jedem Auftrag. Das Video findest du jederzeit oben rechts.",vid:"regel",a:["",null],b:["Weiter",()=>intro(3)],skip:1})}
+function startProbe(){prog.seen=true;save();pclose();mode="prim";$("help").checked=true;try{pick.value="a1"}catch(e){}load(NETS.a1);probe=true;draw();
+  say("Probeauftrag Campingplatz: Wähle einen Startknoten, zum Beispiel die Rezeption. Die grünen Leitungen sind deine Kandidaten. Baue immer die günstigste.")}
 const aud=new Audio();let sound=false;
 function hear(i){try{aud.pause();aud.src="data:audio/mpeg;base64,"+AUD[i];const p=aud.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}
 function quiet(){try{aud.pause()}catch(e){}}
