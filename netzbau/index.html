@@ -248,7 +248,7 @@ function clickRep(e){const[a,b,c]=e,k=key(a,b);
   if(k!=key(rep_.right[0],rep_.right[1]))return bad(e,nm(a)+"–"+nm(b)+" ("+c+") verbindet die zwei Teile, aber es geht günstiger.");
   built.push(e);done=true;prog.rek++;streak=errors==0?streak+1:0;save();
   say("Reklamation erledigt! Neue Offerte: "+net.total+". "+(errors==0?"Ohne einen einzigen Fehler.":"Fehler unterwegs: "+errors+".")+" Erledigte Reklamationen: "+prog.rek+".","win");draw()}
-const PIN="4127";let tcode=0;
+const PIN="5068";let tcode=0;
 function win(){return Math.floor(Date.now()/300000)}
 function codeFor(w,n){let x=(Math.imul(w,2654435761)+n*40503+771919)>>>0;x=(x^(x>>>13))>>>0;x=Math.imul(x,0x5bd1e995)>>>0;x=(x^(x>>>15))>>>0;return 1000+(x%9000)}
 function checkCode(c){const w=win();for(const d of[0,-1,-2,1])for(const n of[8,12])if(codeFor(w+d,n)==c)return{n,w:w+d};return null}
