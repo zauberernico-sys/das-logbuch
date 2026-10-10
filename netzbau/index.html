@@ -275,7 +275,16 @@ const PIN="5068";let tcode=0;
 function win(){return Math.floor(Date.now()/300000)}
 function codeFor(w,n){let x=(Math.imul(w,2654435761)+n*40503+771919)>>>0;x=(x^(x>>>13))>>>0;x=Math.imul(x,0x5bd1e995)>>>0;x=(x^(x>>>15))>>>0;return 1000+(x%9000)}
 function checkCode(c){const w=win();for(const d of[0,-1,-2,1])for(const n of[8,12,16])if(codeFor(w+d,n)==c)return{n,w:w+d};return null}
-const RELAY="https://ntfy.sh/", topic=c=>(window.__tp||"netzbau-ag-bs-")+c;
+const DB="https://netzbau-5089e-default-rtdb.europe-west1.firebasedatabase.app/d/", room=c=>(window.__tp||"")+c, url=c=>DB+room(c)+".json";
+let tOff=0;const PC="-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz",NOLIVE="Keine Live-Verbindung. Resultate von Hand eintragen.";
+function idTime(id){let t=0;for(let i=0;i<8;i++)t=t*64+PC.indexOf(id[i]);return t}
+function fresh(o){return !!o&&typeof o=="object"&&(!o.t||o.t>=Date.now()+tOff-25*60000)}
+function mapMsgs(d){return d&&typeof d=="object"?Object.values(d).filter(fresh).sort((a,b)=>(a.t||0)-(b.t||0)):[]}
+function tmo(ms){try{const a=new AbortController();setTimeout(()=>a.abort(),ms);return{signal:a.signal}}catch(e){return{}}}
+function send(c,o){try{return fetch(url(c),{method:"POST",body:JSON.stringify({...o,t:{".sv":"timestamp"}}),...tmo(5000)}).then(r=>r.ok?r.json():null).then(j=>{if(j&&j.name){const st=idTime(j.name);if(st>1e12)tOff=st-Date.now();return true}return false}).catch(()=>false)}catch(e){return Promise.resolve(false)}}
+function fetchLobby(c){try{return fetch(url(c),{cache:"no-store",...tmo(5000)}).then(r=>r.ok?r.json():undefined).then(d=>d===undefined?null:mapMsgs(d)).catch(()=>null)}catch(e){return Promise.resolve(null)}}
+function stream(c,onAll,onOne,onOpen,onErr){const e=new EventSource(url(c));e.onopen=onOpen;e.onerror=onErr;
+  e.addEventListener("put",ev=>{try{const m=JSON.parse(ev.data);if(m.path=="/")onAll(mapMsgs(m.data));else if(fresh(m.data))onOne(m.data)}catch(x){}});return e}
 let es=null, live=false, pollT=null, lastOk=0;
 let tmsgs=[],curR={},sentR={};
 function lastStart(a,code){let l=null;(a||[]).forEach(o=>{if(o&&o.s&&parseInt(o.c,10)==code&&o.r)l={r:parseInt(o.r,10)||0,n:[8,12,16].includes(parseInt(o.n,10))?parseInt(o.n,10):8}});return l}
@@ -283,32 +292,25 @@ function joinsOf(a,code){const j=new Set();(a||[]).forEach(o=>{if(o&&typeof o.j=
 function tApply(){const c=tcode;lobby[c]=joinsOf(tmsgs,c);const l=lastStart(tmsgs,c);if(l&&!(sentR[c]&&!tmsgs.some(o=>o&&o.s&&o.r==sentR[c])))curR[c]=l.r;showLobby();showKlass()}
 function tMsg(o){if(!o)return;tmsgs.push(o);if(tmsgs.length>3000)tmsgs.shift();if(typeof o.f=="string")addKlass(o);else tApply()}
 function pollKlass(){const c=tcode;if($("overlay").hidden||!(c>=1000&&c<=9999))return;
-  fetchLobby(c).then(a=>{if(c!=tcode)return;if(a===null){if(!es||es.readyState!=1)setLive(false,"Keine Live-Verbindung. Resultate von Hand eintragen.");return}lastOk=Date.now();tmsgs=a;a.forEach(o=>{if(o&&typeof o.f=="string")addKlass(o)});tApply();if(!es||es.readyState!=1)setLive(true,"Live: Resultate erscheinen alle paar Sekunden von selbst.")})}
+  fetchLobby(c).then(a=>{if(c!=tcode)return;if(a===null){if(!es||es.readyState!=1)setLive(false,NOLIVE);return}lastOk=Date.now();tmsgs=a;a.forEach(o=>{if(o&&typeof o.f=="string")addKlass(o)});tApply();if(!es||es.readyState!=1)setLive(true,"Live: Resultate erscheinen alle paar Sekunden von selbst.")})}
 function addKlass(o){if(!o||typeof o.f!="string")return;const f=o.f.trim().slice(0,18),p=parseInt(o.p,10),c=parseInt(o.c,10),r=parseInt(o.r,10)||0;if(!f||!(p>=0&&p<=1000)||!(c>=1000&&c<=9999))return;
   const i=prog.klass.findIndex(x=>x.f==f&&x.c==c&&(x.r||0)==r);if(i>=0){if(prog.klass[i].p>=p)return;prog.klass[i].p=p}else prog.klass.push({f,p,c,r});prog.klass=prog.klass.slice(-400);save();showKlass()}
 function setLive(ok,txt){live=ok;const e=$("olive");e.textContent=txt;e.className=ok?"on":"off"}
-function listen(){if(es){es.close();es=null}tmsgs=[];if(pollT){clearInterval(pollT)}pollT=setInterval(()=>{if(!es||es.readyState!=1)pollKlass()},10000);const c=tcode;if(!(c>=1000&&c<=9999)){setLive(false,"");return}
-  if(typeof EventSource=="undefined"){setLive(false,"Keine Live-Verbindung. Resultate von Hand eintragen.");return}
+function listen(){if(es){es.close();es=null}tmsgs=[];if(pollT){clearInterval(pollT)}pollT=setInterval(()=>{if(!es||es.readyState!=1)pollKlass()},8000);const c=tcode;if(!(c>=1000&&c<=9999)){setLive(false,"");return}
+  if(typeof EventSource=="undefined"){setLive(false,NOLIVE);pollKlass();return}
   setLive(false,"Verbinde ...");
-  try{es=new EventSource(RELAY+topic(c)+"/sse?since=20m");
-    es.onopen=()=>{setLive(true,"Live: Resultate erscheinen von selbst.");};
-    es.onerror=()=>{if(Date.now()-lastOk>20000)setLive(false,"Verbinde ...");pollKlass()};
-    es.onmessage=ev=>{try{const m=JSON.parse(ev.data);if(m.event&&m.event!="message")return;tMsg(JSON.parse(m.message))}catch(e){}}}
-  catch(e){setLive(false,"Keine Live-Verbindung. Resultate von Hand eintragen.")}}
+  try{es=stream(c,a=>{lastOk=Date.now();tmsgs=a;a.forEach(o=>{if(typeof o.f=="string")addKlass(o)});tApply()},tMsg,()=>{lastOk=Date.now();setLive(true,"Live: Resultate erscheinen von selbst.")},()=>{if(Date.now()-lastOk>20000)setLive(false,"Verbinde ...");pollKlass()})}
+  catch(e){setLive(false,NOLIVE)}}
 function sendScore(c,pts,r){const o={f:prog.firma||"Firma ohne Namen",p:pts,c,r:r||0};
   return send(c,o).then(ok=>ok||new Promise(res=>setTimeout(()=>send(c,o).then(res),9000)))}
-function fetchTop(c){try{return fetch(RELAY+topic(c)+"/json?poll=1&since=20m").then(r=>r.ok?r.text():"").then(t=>{const best={};t.split("\n").forEach(l=>{try{const m=JSON.parse(l);if(m.event!="message")return;const o=JSON.parse(m.message),p=parseInt(o.p,10);if(typeof o.f=="string"&&p>=0&&p<=1000&&parseInt(o.c,10)==c){const f=o.f.trim().slice(0,18);if(!(best[f]>=p))best[f]=p}}catch(e){}});
-    return Object.entries(best).map(([f,p])=>({f,p})).sort((a,b)=>b.p-a.p)}).catch(()=>null)}catch(e){return Promise.resolve(null)}}
-function topFrom(a,c,r){const best={};(a||[]).forEach(o=>{if(!o||typeof o.f!="string"||parseInt(o.c,10)!=c||(parseInt(o.r,10)||0)!=(r||0))return;const p=parseInt(o.p,10),f=o.f.trim().slice(0,18);if(f&&p>=0&&p<=1000&&!(best[f]>=p))best[f]=p});return Object.entries(best).map(([f,p])=>({f,p})).sort((a,b)=>b.p-a.p)}
-function showClassTop(c){if(wes&&kcode==c){drawTop(c,topFrom(kmsgs,c,duel?duel.r:0));return}fetchTop(c).then(t=>drawTop(c,t))}
+function fetchTop(c){return fetchLobby(c).then(a=>a===null?null:topFrom(a,c,null))}
+function topFrom(a,c,r){const best={};(a||[]).forEach(o=>{if(!o||typeof o.f!="string"||parseInt(o.c,10)!=c||(r!=null&&(parseInt(o.r,10)||0)!=r))return;const p=parseInt(o.p,10),f=o.f.trim().slice(0,18);if(f&&p>=0&&p<=1000&&!(best[f]>=p))best[f]=p});return Object.entries(best).map(([f,p])=>({f,p})).sort((a,b)=>b.p-a.p)}
+function showClassTop(c){if(wes&&kcode==c){drawTop(c,topFrom(kmsgs,c,duel?duel.r:null));return}fetchTop(c).then(t=>drawTop(c,t))}
 function drawTop(c,t){const box=$("ctop");if(!t||!t.length){box.textContent="";return}
   box.innerHTML="<b>Klasse, Spiel "+c+":</b> ";t.slice(0,3).forEach((x,i)=>{const sp=document.createElement("span");sp.textContent=(i+1)+". "+x.f+" "+x.p+(i<Math.min(t.length,3)-1?" · ":"");box.appendChild(sp)});
   const me=t.findIndex(x=>x.f==(prog.firma||"Firma ohne Namen"));if(me>=0){const sp=document.createElement("span");sp.textContent=" · Euer Rang: "+(me+1)+" von "+t.length;box.appendChild(sp)}}
 let lobby={},waitT=null,wes=null;
 function showLobby(){const c=tcode,l=lobby[c]?[...lobby[c]]:[];$("olobby").textContent=c?(l.length?l.length+(l.length==1?" Firma":" Firmen")+" bereit: "+l.join(", "):"Noch keine Firma angemeldet."):""}
-function tmo(ms){try{const a=new AbortController();setTimeout(()=>a.abort(),ms);return{signal:a.signal}}catch(e){return{}}}
-function fetchLobby(c){try{return fetch(RELAY+topic(c)+"/json?poll=1&since=20m",{cache:"no-store",...tmo(4000)}).then(r=>r.ok?r.text():null).then(t=>{if(t===null)return null;const out=[];t.split("\n").forEach(l=>{try{const m=JSON.parse(l);if(m.event=="message")out.push(JSON.parse(m.message))}catch(e){}});return out}).catch(()=>null)}catch(e){return Promise.resolve(null)}}
-function send(c,o){try{return fetch(RELAY+topic(c),{method:"POST",body:JSON.stringify(o),...tmo(4000)}).then(r=>r.ok).catch(()=>false)}catch(e){return Promise.resolve(false)}}
 let kmsgs=[],kcode=0,onT=null,played={};
 function stopWait(){if(waitT){clearTimeout(waitT);waitT=null}}
 function closeK(){stopWait();clearTimeout(onT);if(wes){try{wes.close()}catch(e){}wes=null}kmsgs=[];kcode=0}
@@ -320,9 +322,8 @@ function waitDuel(code,n0){closeK();kcode=code;let joined=false,opened=false,man
   const on=()=>{if(kcode!=code)return;const l=lastStart(kmsgs,code);if(l&&played[code]!==l.r){begin(l.n,l.r);return}if(!joined)join(0);if(done&&duel&&duel.code==code)drawTop(code,topFrom(kmsgs,code,duel.r))};
   waitT=setTimeout(()=>{if(!opened)manual()},6000);
   if(typeof EventSource=="undefined"){manual();return}
-  try{wes=new EventSource(RELAY+topic(code)+"/sse?since=20m");wes.onopen=()=>{opened=true;clearTimeout(onT);onT=setTimeout(on,1200)};
-    wes.onmessage=ev=>{try{const m=JSON.parse(ev.data);if(m.event&&m.event!="message")return;kmsgs.push(JSON.parse(m.message));if(kmsgs.length>3000)kmsgs.shift();clearTimeout(onT);onT=setTimeout(on,400)}catch(e){}};
-    wes.onerror=()=>{if(!opened)manual()}}catch(e){manual()}}
+  const soon=()=>{clearTimeout(onT);onT=setTimeout(on,150)};
+  try{wes=stream(code,a=>{kmsgs=a;soon()},o=>{kmsgs.push(o);if(kmsgs.length>3000)kmsgs.shift();soon()},()=>{opened=true},()=>{if(!opened)manual()})}catch(e){manual()}}
 const FIRMS=["Kabel König GmbH","Billig-Netz AG","Turbo Tiefbau"];
 function startDuel(){$("ctop").textContent="";let code=parseInt($("code").value,10);
   if(!prog.firma){say("Gebt eurer Firma zuerst einen Namen.","bad");$("firma").focus();return}
@@ -515,7 +516,7 @@ $("bMara").onclick=startMara;$("bRep").onclick=startRep;
 function hhmm(t){return String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0")}
 function openBeamer(){$("pinrow").hidden=true;$("pin").value="";let ck=tcode?checkCode(tcode):null;if(!ck){tcode=codeFor(win(),8);ck={w:win()}}
   $("ocode").textContent=tcode;$("ohint").textContent="Nummer eintippen und «Beitreten» klicken · gültig bis "+hhmm(new Date((ck.w+2)*300000))+" Uhr. Wenn alle bereit sind, unten eine Runde starten.";
-  showKlass();showLobby();$("overlay").hidden=false;listen()}
+  showKlass();showLobby();$("overlay").hidden=false;send(tcode,{c:tcode,n:0});listen()}
 function startRound(n){const c=tcode;if(!c)return;const r=1+Math.floor(Math.random()*99999);curR[c]=r;sentR[c]=r;showKlass();
   let tries=0;const OK="Runde läuft: "+n+" Knoten. Die Resultate erscheinen rechts. Für die nächste Runde einfach wieder starten, die Firmen bleiben angemeldet.";
   const go=()=>{if(sentR[c]!==r)return;send(c,{s:1,c,n,r}).then(ok=>{if(sentR[c]!==r)return;if(ok){$("ohint").textContent=OK}else if(++tries<12){$("ohint").textContent="Start wird gesendet ... Versuch "+(tries+1);setTimeout(go,4000)}else $("ohint").textContent="Keine Verbindung. Schliesse dieses Fenster und starte das Duell neu, oder trage die Punkte von Hand ein."})};go()}
