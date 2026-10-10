@@ -392,6 +392,10 @@ function bad(e,t){errors++;flash=key(e[0],e[1]);
   if(mara&&mode=="prim"){mara.lives--;if(mara.lives<=0){done=true;stopTimer();const rec=mara.score>prog.best;if(rec){prog.best=mara.score;save()}
     say(t+" Das war das dritte Leben. Marathon beendet nach "+mara.score+" Netzen."+(rec?" Neuer Rekord!":" Dein Rekord: "+prog.best+".")+" Klicke auf «Marathon» für einen neuen Versuch.","bad");draw();return}
     t+=" Noch "+mara.lives+" Leben."}
+  if(career!=null&&mode=="prim"&&!done){
+    if(errors>=3){stopTimer();hintKey=null;say(t+" Das war der dritte Fehler. Auftrag verloren.","bad");draw();const cv=career,L=LEVELS[cv];
+      setTimeout(()=>{if(career===cv)card({k:"Drei Fehler",t:"Auftrag verloren",p:"«"+L.kunde+"» hat den Auftrag an die Konkurrenz vergeben. Du bekommst ein neues Netz. Vergleiche zuerst alle Kandidaten, dann baue die günstigste Leitung.",sm:1,a:["",null],b:["Nochmals versuchen",()=>{pclose();startLevel(cv)}]})},900);return}
+    t+=" Fehler "+errors+" von 3."}
   if((probe&&net===NETS.a1||career!=null&&LEVELS[career].auto)&&inNet.size>0){const c=cheapest();if(c){hintKey=key(c[0],c[1]);t+=" Die blau blinkende Leitung ist die richtige."}}
   say(t,"bad");draw();const f=flash;setTimeout(()=>{if(flash==f){flash=null;draw()}},1100)}
 function clickEdge(e){
@@ -447,7 +451,7 @@ let pnext=null,pA=null;
 $("pgo").onclick=()=>{if(pnext)pnext()};$("phear").onclick=()=>{if(pA)pA()};$("pskip").onclick=()=>{prog.seen=true;save();pclose()};
 function pclear(){const v=$("pvid");try{v.pause()}catch(e){}v.removeAttribute("src");try{v.load()}catch(e){}v.style.display="none";$("pnet").style.display="none";$("pnet").innerHTML="";quiet()}
 function pclose(){pclear();$("promo").hidden=true}
-function card(o){pclear();const P=$("promo");P.className=o.vid?"v":o.net?"n":"";$("pk").textContent=o.k;$("pt").textContent=o.t;$("pp").textContent=o.p||"";
+function card(o){pclear();const P=$("promo");P.className=o.vid?"v":(o.net||o.sm)?"n":"";$("pk").textContent=o.k;$("pt").textContent=o.t;$("pp").textContent=o.p||"";
   $("phear").textContent=o.a[0];pA=o.a[1];$("phear").style.display=o.a[0]?"":"none";$("pgo").textContent=o.b[0];pnext=o.b[1];$("pskip").style.display=o.skip?"":"none";
   if(o.vid){const v=$("pvid");v.style.display="";v.muted=!sound;v.src="data:video/mp4;base64,"+VIDS[o.vid];const p=v.play();if(p&&p.catch)p.catch(()=>{})}
   if(o.net)mini(o.net,o.plain);P.hidden=false;P.scrollTop=0;if(o.aud!=null&&sound)hear(o.aud)}
