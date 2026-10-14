@@ -496,10 +496,10 @@ function brief(i,promoted,kk){const L=LEVELS[i];card({k:kk?kk+" · Auftrag 1 von
   a:["▶ Anhören",()=>hear(i)],b:["Auftrag annehmen",()=>{prog.seen=true;save();pclose();startLevel(i)}]})}
 function setSound(b){sound=b;prog.sound=b;save();sndUI()}
 function intro(n){
-  if(n==0)card({k:"Willkommen bei der",t:"Netzbau AG",p:"Du beginnst heute deine Lehre und arbeitest dich Auftrag für Auftrag hoch bis zur Legende. Stecke jetzt deine Kopfhörer ein und klicke auf «Mit Ton starten».",a:["Ohne Ton starten",()=>{setSound(false);intro(1)}],b:["Mit Ton starten",()=>{setSound(true);intro(1)}],skip:1});
+  if(n==0)card({k:"Willkommen bei der",t:"Netzbau AG",p:"Du beginnst heute deine Lehre und arbeitest dich Auftrag für Auftrag hoch bis zur Legende. Stecke jetzt deine Kopfhörer ein und klicke auf «Mit Ton starten».",a:["Ohne Ton starten",()=>{setSound(false);intro(2)}],b:["Mit Ton starten",()=>{setSound(true);intro(2)}],skip:1});
   else if(n==1)card({k:"Film 1 von 2",t:"Der Auftrag",p:sound?"":"Du hast «Ohne Ton» gewählt. Den Ton schaltest du oben rechts jederzeit ein.",vid:"auftrag",a:["",null],b:["Weiter",()=>intro(2)],skip:1});
   else if(n==3)card({k:"Probeauftrag",t:"Campingplatz",p:"Jetzt bist du dran: Baue das Netz für den Campingplatz aus dem Film. Die grünen Leitungen sind deine Kandidaten. Nach einem Fehler blinkt die günstigste blau.",net:NETS.a1,plain:1,a:["",null],b:["Los gehts",startProbe],skip:1});
-  else card({k:"Film 2 von 2",t:"Die Regel",p:"Diese Regel brauchst du bei jedem Auftrag. Das Video findest du jederzeit oben rechts.",vid:"regel",a:["",null],b:["Weiter",()=>intro(3)],skip:1})}
+  else card({k:"Kurzvideo",t:"Die Regel",p:(sound?"":"Du hast «Ohne Ton» gewählt. Den Ton schaltest du oben rechts jederzeit ein. ")+"Diese Regel brauchst du bei jedem Auftrag. Das Video findest du jederzeit oben rechts.",vid:"regel",a:["",null],b:["Weiter",()=>intro(3)],skip:1})}
 function startProbe(){prog.seen=true;save();pclose();mode="prim";$("help").checked=true;try{pick.value="a1"}catch(e){}load(NETS.a1);probe=true;draw();
   say("Probeauftrag Campingplatz: Wähle einen Startknoten, zum Beispiel die Rezeption. Die grünen Leitungen sind deine Kandidaten. Baue immer die günstigste.")}
 const aud=new Audio();let sound=false;
