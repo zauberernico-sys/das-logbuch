@@ -166,6 +166,8 @@ input#code{font:800 26px var(--fd);letter-spacing:.2em;text-align:center;border:
 @keyframes pulse{from{stroke-opacity:1}to{stroke-opacity:.35}}
 @media(prefers-reduced-motion:reduce){.edge.hint .eo{animation:none}}
 details summary{font:700 15px var(--fd);text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
+#hduel{background:var(--on)!important;color:var(--ink)!important;border-color:var(--on)!important;font-weight:800;font-size:1.05em;animation:hd 2.4s ease-in-out infinite}@keyframes hd{50%{box-shadow:0 0 0 5px rgba(255,196,0,.35)}}
+.duelcard{background:var(--on);border:3px solid var(--ink)}.duelcard summary{font-size:22px!important;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px}.duelcard summary::-webkit-details-marker{display:none}.duelcard summary::after{content:"Öffnen ▾";font:800 14px var(--fb);text-transform:none;letter-spacing:0;background:var(--ink);color:#fff;padding:8px 12px;border-radius:10px;white-space:nowrap}.duelcard details[open] summary::after{content:"Zu ▴"}.duelcard .hint{color:var(--ink)}
 </style></head><body>
 <div id="overlay" hidden><div class="ogrid"><div><small>Spielnummer</small><b id="ocode">––––</b><span id="ohint"></span>
   <p id="olobby"></p>
@@ -175,7 +177,7 @@ details summary{font:700 15px var(--fd);text-transform:uppercase;letter-spacing:
   <button class="link" id="oclear" type="button">Rangliste leeren</button></div></div></div>
 <div id="promo" hidden><div><small id="pk"></small><b id="pt"></b><video id="pvid" controls playsinline style="display:none"></video><svg id="pnet" style="display:none"></svg><p id="pp"></p><input id="pinp" inputmode="numeric" maxlength="5" style="display:none" aria-label="Offerte"><div class="pbtn"><button id="phear" class="ghost">▶ Anhören</button><button id="pgo">Auftrag annehmen</button></div><button id="pskip" class="link">Einführung überspringen</button></div></div>
 <div id="vmodal" hidden><div><video id="vid" controls playsinline></video><button id="vclose">Schliessen</button></div></div>
-<header><b>Netz<span>bau</span> AG</b><i>Prim-Trainer</i><span class="hb"><button id="snd" aria-pressed="false">Ton: aus</button><button id="vAuftrag">▶ Film: Der Auftrag</button><button id="vRegel">▶ Video: Die Regel</button></span></header>
+<header><b>Netz<span>bau</span> AG</b><i>Prim-Trainer</i><span class="hb"><button id="hduel">⚔ Klassenduell</button><button id="snd" aria-pressed="false">Ton: aus</button><button id="vAuftrag">▶ Film: Der Auftrag</button><button id="vRegel">▶ Video: Die Regel</button></span></header>
 <main>
 <section class="stage card">
  <div class="top"><div id="msg" role="status" aria-live="polite"></div><div id="timer" hidden></div></div>
@@ -190,18 +192,18 @@ details summary{font:700 15px var(--fd);text-transform:uppercase;letter-spacing:
   <table id="steps"><thead><tr><th>Schritt</th><th>Leitung</th><th>Kosten</th></tr></thead><tbody></tbody></table></div>
 </section>
 <aside class="side">
- <div class="card"><label>Kampagne: Karriere bei der Netzbau AG</label>
-  <div class="camp" id="camp"></div>
-  <div class="lv" id="levels"></div>
-  <p class="hint">Für jedes gelöste Netz gibt es bis zu drei Sterne. Mit sechs Sternen wirst du befördert.</p>
-  <button class="link" id="unlock">Alle Stufen freischalten</button><button class="link" id="wipe" style="margin-left:16px">Alles von vorne starten</button></div>
- <div class="card"><details id="duelbox"><summary>Klassenduell: Firma gegen Firma</summary>
+ <div class="card duelcard"><details id="duelbox"><summary>⚔ Klassenduell: Firma gegen Firma</summary>
   <p class="hint">Das Duell startet die Lehrperson. Die Spielnummer steht dann am Beamer. Bis dahin: Kampagne!</p>
   <input id="firma" maxlength="18" placeholder="Name eurer Firma" aria-label="Name eurer Firma">
   <div style="height:6px"></div><div class="seg"><input id="code" inputmode="numeric" maxlength="4" placeholder="Nummer" aria-label="Spielnummer"><button id="join" class="pri">Beitreten</button></div>
   <div id="pinrow" hidden><div style="height:6px"></div><div class="seg"><input id="pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN" aria-label="PIN der Lehrperson"><button id="pingo">Öffnen</button></div></div>
   <div id="rank"></div><div id="ctop"></div><div id="mybest"></div>
   <button class="link" id="lehr">Lehrperson</button></details></div>
+ <div class="card"><label>Kampagne: Karriere bei der Netzbau AG</label>
+  <div class="camp" id="camp"></div>
+  <div class="lv" id="levels"></div>
+  <p class="hint">Für jedes gelöste Netz gibt es bis zu drei Sterne. Mit sechs Sternen wirst du befördert.</p>
+  <button class="link" id="unlock">Alle Stufen freischalten</button><button class="link" id="wipe" style="margin-left:16px">Alles von vorne starten</button></div>
  <div class="card"><label>Noch mehr Übungen</label>
   <div class="seg"><button id="bMara">Marathon</button><button id="bRep">Reklamation</button></div>
   <p class="hint" id="mara"></p>
@@ -553,6 +555,7 @@ function openBeamer(){$("pinrow").hidden=true;$("pin").value="";let ck=tcode?che
 function startRound(n){const c=tcode;if(!c)return;const r=1+Math.floor(Math.random()*99999);curR[c]=r;sentR[c]=r;showKlass();
   let tries=0;const OK="Runde läuft: "+n+" Knoten. Die Resultate erscheinen rechts. Für die nächste Runde einfach wieder starten, die Firmen bleiben angemeldet.";
   const go=()=>{if(sentR[c]!==r)return;send(c,{s:1,c,n,r}).then(ok=>{if(sentR[c]!==r)return;if(ok){$("ohint").textContent=OK}else if(++tries<12){$("ohint").textContent="Start wird gesendet ... Versuch "+(tries+1);setTimeout(go,4000)}else $("ohint").textContent="Keine Verbindung. Schliesse dieses Fenster und starte das Duell neu, oder trage die Punkte von Hand ein."})};go()}
+$("hduel").onclick=()=>{const d=$("duelbox");d.open=true;d.closest(".card").scrollIntoView({behavior:"smooth",block:"start"});setTimeout(()=>{try{(prog.firma?$("code"):$("firma")).focus({preventScroll:true})}catch(e){}},400)};
 $("lehr").onclick=()=>{$("pinrow").hidden=!$("pinrow").hidden;if(!$("pinrow").hidden)$("pin").focus()};
 $("pingo").onclick=()=>{if($("pin").value===PIN)openBeamer();else{$("pin").value="";say("Falsche PIN. Dieser Bereich ist für die Lehrperson.","bad")}};
 $("pin").addEventListener("keydown",ev=>{if(ev.key=="Enter")$("pingo").click()});
