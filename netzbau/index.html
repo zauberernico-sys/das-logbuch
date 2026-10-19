@@ -116,6 +116,8 @@ td{border-bottom:1px solid var(--ink);padding:3px 6px}
 input#firma{font:700 17px var(--fb);border:2px solid var(--ink);border-radius:8px;padding:9px 12px;width:100%;color:var(--ink)}
 #ctop{font-size:15px;margin-top:10px;font-weight:700;background:var(--on);border-radius:8px;padding:8px 10px}
 #ctop:empty{display:none}
+#crank{background:var(--ink);color:#fff;border-radius:10px;padding:14px 18px;margin:8px 0;display:grid;grid-template-columns:auto 1fr;gap:4px 18px;align-items:center}#crank[hidden]{display:none}
+#crank b{font:800 64px/1 var(--fd);color:var(--on);grid-row:span 2}#crank span{font-size:20px;font-weight:700}#crank small{font-size:15px;color:#c9d1de}
 #olive{font-size:15px;font-weight:700;margin:1vh 0;padding:6px 10px;border-radius:8px}
 #olobby{font-size:clamp(16px,2.4vh,24px);font-weight:700;margin:1.5vh 0}
 #ostart{font-size:clamp(20px,3vh,30px);padding:14px 40px;background:var(--on);border-color:var(--on);width:auto;margin-bottom:1.5vh}#ostart:disabled{opacity:.55}
@@ -178,6 +180,7 @@ details summary{font:700 15px var(--fd);text-transform:uppercase;letter-spacing:
 <section class="stage card">
  <div class="top"><div id="msg" role="status" aria-live="polite"></div><div id="timer" hidden></div></div>
  <button id="next2" class="pri" hidden>Gut gemacht! Weiter zum nächsten Netz ▶</button>
+ <div id="crank" hidden></div>
  <button id="bhear" hidden>▶ Auftrag anhören</button>
  <svg id="net" xmlns="http://www.w3.org/2000/svg"></svg>
  <div class="legend"><span><i style="background:#fff"></i>möglich</span><span><i style="background:#12733E"></i>Kandidat</span><span><i style="background:#FFC400"></i>gebaut</span><span><i style="background:#E3262E"></i>verboten</span></div>
@@ -317,7 +320,14 @@ function sendScore(c,pts,r){const o={f:prog.firma||"Firma ohne Namen",p:pts,c,r:
 function fetchTop(c){return fetchLobby(c).then(a=>a===null?null:topFrom(a,c,null))}
 function topFrom(a,c,r){const best={};(a||[]).forEach(o=>{if(!o||typeof o.f!="string"||parseInt(o.c,10)!=c||(r!=null&&(parseInt(o.r,10)||0)!=r))return;const p=parseInt(o.p,10),f=o.f.trim().slice(0,18);if(f&&p>=0&&p<=1000&&!(best[f]>=p))best[f]=p});return Object.entries(best).map(([f,p])=>({f,p})).sort((a,b)=>b.p-a.p)}
 function showClassTop(c){if(wes&&kcode==c){drawTop(c,topFrom(kmsgs,c,duel?duel.r:null));return}fetchTop(c).then(t=>drawTop(c,t))}
-function drawTop(c,t){const box=$("ctop");if(!t||!t.length){box.textContent="";return}
+function drawRank(c,t){const cr=$("crank");if(!duel||duel.code!=c||!done||!t||!t.length){cr.hidden=true;return}
+  const me=t.findIndex(x=>x.f==(prog.firma||"Firma ohne Namen"));if(me<0){cr.hidden=true;return}
+  const tot=Math.max(t.length,joinsOf(kmsgs,c).size),open=tot-t.length;
+  cr.innerHTML="";const b=document.createElement("b"),s1=document.createElement("span"),s2=document.createElement("small");b.textContent=(me+1)+".";
+  s1.textContent=me<3?"Platz "+(me+1)+" von "+tot+": Ihr steht am Beamer in den Top 3!":"Euer Rang in der Klasse: "+(me+1)+" von "+tot;
+  s2.textContent=(open>0?open+(open==1?" Firma rechnet":" Firmen rechnen")+" noch, der Rang kann sich noch ändern. ":"Alle Firmen sind fertig. ")+"Bestes Resultat: "+t[0].f+" mit "+t[0].p+" Punkten.";
+  cr.append(b,s1,s2);cr.hidden=false}
+function drawTop(c,t){drawRank(c,t);const box=$("ctop");if(!t||!t.length){box.textContent="";return}
   box.innerHTML="<b>Klasse, Spiel "+c+":</b> ";t.slice(0,3).forEach((x,i)=>{const sp=document.createElement("span");sp.textContent=(i+1)+". "+x.f+" "+x.p+(i<Math.min(t.length,3)-1?" · ":"");box.appendChild(sp)});
   const me=t.findIndex(x=>x.f==(prog.firma||"Firma ohne Namen"));if(me>=0){const sp=document.createElement("span");sp.textContent=" · Euer Rang: "+(me+1)+" von "+t.length;box.appendChild(sp)}}
 let lobby={},waitT=null,wes=null;
@@ -424,7 +434,7 @@ function draw(){
 }
 function say(t,c){const m=$("msg");m.textContent=t;m.className=c||""}
 function nm(k){return net.nodes[k][0]!=k?net.nodes[k][0]:k}
-function start(){inNet=new Set();built=[];errors=0;done=false;flash=null;hintKey=null;tipUsed=false;timedOut=false;stopTimer();
+function start(){$("crank").hidden=true;inNet=new Set();built=[];errors=0;done=false;flash=null;hintKey=null;tipUsed=false;timedOut=false;stopTimer();
   if(career!=null&&LEVELS[career].time){timeLeft=LEVELS[career].time}
   if(mara){say("Marathon, Runde "+(mara.round+1)+": "+Object.keys(net.nodes).length+" Knoten. Wähle einen Startknoten. Du hast noch "+mara.lives+" Leben.");draw();return}
   if(duel){showRank(null);say("Wettkampf "+duel.code+": Wähle einen Startknoten. Die Zeit läuft ab dem ersten Klick. Jeder Fehler kostet 80 Punkte.");draw();return}
@@ -458,9 +468,10 @@ function clickEdge(e){
     const cost=built.reduce((t,x)=>t+x[2],0);
     if(mara){mara.score++;mara.round++;if(mara.score>prog.best){prog.best=mara.score;save()}
       say("Geschafft! Offerte "+cost+". Gelöst im Marathon: "+mara.score+". Das nächste Netz wird "+(mara.round<MSIZE.length?"grösser.":"wieder 24 Knoten haben."),"win")}
-    else if(duel){const sec=Math.round((Date.now()-t0)/1000),pts=Math.max(0,1000-4*sec-80*errors),rk=showRank(pts);prog.duels.push({c:duel.code,p:pts});prog.duels=prog.duels.slice(-30);save();showBest();
+    else if(duel){const sec=Math.round((Date.now()-t0)/1000),pts=Math.max(0,1000-4*sec-80*errors),liveK=!!(wes&&kcode==duel.code&&wes.readyState==1),rk=liveK?0:showRank(pts);
+      if(liveK){$("rank").innerHTML="";kmsgs.push({f:prog.firma||"Firma ohne Namen",p:pts,c:duel.code,r:duel.r||0,t:Date.now()});drawTop(duel.code,topFrom(kmsgs,duel.code,duel.r))}prog.duels.push({c:duel.code,p:pts});prog.duels=prog.duels.slice(-30);save();showBest();
       const dc=duel.code;sendScore(dc,pts,duel.r).then(ok=>{if(duel&&duel.code==dc&&done){say($("msg").textContent+(ok?" Euer Resultat ist am Beamer.":" Senden ging nicht: Meldet es der Lehrperson."),"win")}if(ok)setTimeout(()=>showClassTop(dc),2500)});
-      say("Offerte "+cost+" in "+sec+" Sekunden, Fehler: "+errors+". Das gibt "+pts+" Punkte und Rang "+rk+" von 4. Firma: "+(prog.firma||"ohne Namen")+".","win")}
+      say("Offerte "+cost+" in "+sec+" Sekunden, Fehler: "+errors+". Das gibt "+pts+" Punkte"+(liveK?"":" und Rang "+rk+" von 4")+". Firma: "+(prog.firma||"ohne Namen")+".","win")}
     else if(career!=null){
       if(LEVELS[career].calc){const cv=career;stopTimer();calcPending=true;say("Alle Knoten sind am Netz. Wie hoch ist deine Offerte?");
         card({k:"Kopfrechnen",t:"Deine Offerte?",p:"Zähle die Kosten aller gebauten Leitungen zusammen und tippe die Summe ein.",sm:1,inp:1,a:["",null],b:["Offerte abgeben",()=>{const v=parseInt($("pinp").value,10);calcPending=false;pclose();
