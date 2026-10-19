@@ -4,7 +4,7 @@
 :root{--ink:#14213A;--paper:#fff;--bg:#EEF1F6;--on:#FFC400;--cand:#12733E;--no:#E3262E;--blau:#1F4FD8;--muted:#55627A;
 --fd:"Barlow Condensed","Arial Narrow",Arial,sans-serif;--fb:"Barlow","Segoe UI",Arial,sans-serif}
 *{box-sizing:border-box}
-html,body{margin:0}
+html,body{margin:0}html,body{overflow-anchor:none}
 body{background:var(--bg);color:var(--ink);font:500 17px/1.4 var(--fb)}
 header{background:var(--ink);color:#fff;padding:10px 20px;display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
 header b{font:800 30px/1 var(--fd);text-transform:uppercase}
@@ -144,7 +144,7 @@ input#code{font:800 26px var(--fd);letter-spacing:.2em;text-align:center;border:
 #otop li.leer{font:500 1.6vw var(--fb);background:none;color:var(--muted)}
 #ototal{font:700 1.5vw var(--fb);margin:1.2vh 0 0}
 #ototal:empty{display:none}
-#ocount{font-size:14px;color:var(--muted);margin:1vh 0}
+#ocount{margin:2vh 0 1vh}#ocount .cnum{font:600 clamp(18px,2.4vw,34px) var(--fb)}#ocount .cnum b{font-size:1.5em;font-weight:800;color:var(--ink);margin-right:.25em}#ocount .cbar{height:2vh;min-height:12px;border:2px solid currentColor;border-radius:99px;overflow:hidden;margin:1vh 0}#ocount .cbar i{display:block;height:100%;background:var(--on);transition:width .6s}#ocount .copen{font-size:clamp(14px,1.5vw,22px);opacity:.8;margin:.5vh 0}
 #oform{display:grid;grid-template-columns:1.6fr 1fr auto;gap:8px}
 #oform input{font:700 17px var(--fb);border:2px solid var(--ink);border-radius:8px;padding:9px 12px;min-width:0;color:var(--ink)}
 #overlay .link{color:var(--muted);padding:6px 0}
@@ -364,7 +364,10 @@ function showKlass(){const cc=tcode,rr=curR[cc]||0,t=prog.klass.filter(x=>x.c==c
   $("ototal").textContent=rounds>1?"Gesamtwertung über "+rounds+" Runden: "+tot.map((x,i)=>(i+1)+". "+x[0]+" "+x[1]).join(" · "):"";
   if(!t.length){const li=document.createElement("li");li.className="leer";li.textContent="Noch keine Resultate in dieser Runde.";o.appendChild(li)}
   t.slice(0,3).forEach((x,i)=>{const li=document.createElement("li"),n=document.createElement("i"),f=document.createElement("span"),p=document.createElement("span");n.textContent=i+1;f.textContent=x.f;p.textContent=x.p;li.append(n,f,p);o.appendChild(li)});
-  $("ocount").textContent=t.length?t.length+(t.length==1?" Firma hat":" Firmen haben")+" diese Runde fertig":""}
+  const oc=$("ocount");oc.textContent="";if(!rr)return;const L=lobby[cc]?[...lobby[cc]]:[],fin=new Set(t.map(x=>x.f)),all=Math.max(L.length,t.length),open=L.filter(f=>!fin.has(f));
+  const h=document.createElement("div");h.className="cnum";const b=document.createElement("b");b.textContent=t.length+" von "+all;h.append(b," Firmen fertig");
+  const bar=document.createElement("div");bar.className="cbar";const fi=document.createElement("i");fi.style.width=(all?Math.round(100*t.length/all):0)+"%";bar.appendChild(fi);oc.append(h,bar);
+  const m=document.createElement("p");m.className="copen";m.textContent=!all?"":open.length==0?"Alle sind fertig!":"Noch am Rechnen: "+(open.length<=12?open.join(", "):open.length+" Firmen");oc.appendChild(m)}
 function showTimer(){const t=$("timer");const L=career!=null?LEVELS[career]:null;if(!L||!L.time){t.hidden=true;return}
   t.hidden=false;t.textContent=timedOut?"0":timeLeft;t.className=timeLeft<=20?"low":""}
 function cheapest(){const cs=candidates();if(!cs.length)return null;return cs.reduce((m,e)=>e[2]<m[2]?e:m)}
@@ -434,7 +437,8 @@ function draw(){
 }
 function say(t,c){const m=$("msg");m.textContent=t;m.className=c||""}
 function nm(k){return net.nodes[k][0]!=k?net.nodes[k][0]:k}
-function start(){$("crank").hidden=true;inNet=new Set();built=[];errors=0;done=false;flash=null;hintKey=null;tipUsed=false;timedOut=false;stopTimer();
+function toNet(){const go=()=>{try{window.scrollTo(0,0)}catch(e){}};go();requestAnimationFrame(go);setTimeout(go,120)}
+function start(){$("crank").hidden=true;toNet();inNet=new Set();built=[];errors=0;done=false;flash=null;hintKey=null;tipUsed=false;timedOut=false;stopTimer();
   if(career!=null&&LEVELS[career].time){timeLeft=LEVELS[career].time}
   if(mara){say("Marathon, Runde "+(mara.round+1)+": "+Object.keys(net.nodes).length+" Knoten. Wähle einen Startknoten. Du hast noch "+mara.lives+" Leben.");draw();return}
   if(duel){showRank(null);say("Wettkampf "+duel.code+": Wähle einen Startknoten. Die Zeit läuft ab dem ersten Klick. Jeder Fehler kostet 80 Punkte.");draw();return}
