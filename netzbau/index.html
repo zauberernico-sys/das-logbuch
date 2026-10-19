@@ -46,6 +46,8 @@ svg#net{width:100%;height:auto;max-height:58vh;display:block;touch-action:manipu
 .node.on circle{fill:var(--ink)}
 .node text{font:700 30px var(--fd);text-anchor:middle;fill:var(--ink);pointer-events:none}
 .node.two text{font-size:25px}
+.prohead{font:800 15px var(--fd);text-transform:uppercase;letter-spacing:.08em;background:var(--ink);color:var(--on);padding:6px 10px;border-radius:6px;margin:6px 0 2px}
+#pinp{font:800 32px var(--fd);width:180px;text-align:center;padding:8px;border-radius:8px;border:3px solid var(--on);margin:0 auto 18px;display:block}
 .node.on text{fill:var(--on)}
 .node.pick circle{stroke:var(--blau)}
 .nm{font:700 25px var(--fb);fill:var(--ink);pointer-events:none}
@@ -169,7 +171,7 @@ details summary{font:700 15px var(--fd);text-transform:uppercase;letter-spacing:
  <div class="opod"><small>Top 3 der Klasse</small><ol id="otop"></ol><p id="ototal"></p><p id="olive" class="off"></p><p id="ocount"></p>
   <form id="oform"><input id="oname" maxlength="18" placeholder="Firma" aria-label="Firma"><input id="opts" inputmode="numeric" maxlength="4" placeholder="Punkte" aria-label="Punkte"><button>Eintragen</button></form>
   <button class="link" id="oclear" type="button">Rangliste leeren</button></div></div></div>
-<div id="promo" hidden><div><small id="pk"></small><b id="pt"></b><video id="pvid" controls playsinline style="display:none"></video><svg id="pnet" style="display:none"></svg><p id="pp"></p><div class="pbtn"><button id="phear" class="ghost">▶ Anhören</button><button id="pgo">Auftrag annehmen</button></div><button id="pskip" class="link">Einführung überspringen</button></div></div>
+<div id="promo" hidden><div><small id="pk"></small><b id="pt"></b><video id="pvid" controls playsinline style="display:none"></video><svg id="pnet" style="display:none"></svg><p id="pp"></p><input id="pinp" inputmode="numeric" maxlength="5" style="display:none" aria-label="Offerte"><div class="pbtn"><button id="phear" class="ghost">▶ Anhören</button><button id="pgo">Auftrag annehmen</button></div><button id="pskip" class="link">Einführung überspringen</button></div></div>
 <div id="vmodal" hidden><div><video id="vid" controls playsinline></video><button id="vclose">Schliessen</button></div></div>
 <header><b>Netz<span>bau</span> AG</b><i>Prim-Trainer</i><span class="hb"><button id="snd" aria-pressed="false">Ton: aus</button><button id="vAuftrag">▶ Film: Der Auftrag</button><button id="vRegel">▶ Video: Die Regel</button></span></header>
 <main>
@@ -225,13 +227,18 @@ const LEVELS=[
  {name:"Chefetage",kunde:"Fasnachtsumzug",brief:"Der Umzug startet in zwei Minuten. Das Netz muss vorher stehen.",desc:"12 Knoten · ohne Hilfe · 120 Sekunden",c:4,r:3,w:15,cand:false,time:120},
  {name:"Konzern",kunde:"Flughafen",brief:"Sechzehn Gates. Wer hier eine Leitung zu viel baut, zahlt Millionen.",desc:"16 Knoten · ohne Hilfe",c:4,r:4,w:15,cand:false},
  {name:"Weltkonzern",kunde:"Alpentunnel",brief:"Zwanzig Stationen tief im Berg, und die Uhr läuft.",desc:"20 Knoten · ohne Hilfe · 180 Sekunden",c:5,r:4,w:15,cand:false,time:180},
- {name:"Legende",kunde:"Mondbasis",brief:"Vierundzwanzig Module. Der grösste Auftrag der Firmengeschichte.",desc:"24 Knoten · ohne Hilfe · 180 Sekunden",c:6,r:4,w:12,cand:false,time:180}];
+ {name:"Legende",kunde:"Mondbasis",brief:"Vierundzwanzig Module. Der grösste Auftrag der Firmengeschichte.",desc:"24 Knoten · ohne Hilfe · 180 Sekunden",c:6,r:4,w:12,cand:false,time:180},
+ {name:"Gigant",kunde:"Stadtnetz Basel",pro:1,brief:"Fünfunddreissig Quartiere in einem Netz. Arbeite ruhig und genau, die Uhr gibt dir fünf Minuten.",desc:"35 Knoten · ohne Hilfe · 300 Sekunden",c:7,r:5,w:15,cand:false,time:300},
+ {name:"Nebel",kunde:"Bergwerk",pro:1,fog:1,brief:"Im Bergwerk ist es dunkel. Du siehst die Kosten nur bei Leitungen, die an dein Netz grenzen. Reicht das für Prim? Denk darüber nach.",desc:"20 Knoten · Kosten nur bei Leitungen am Netz sichtbar",c:5,r:4,w:15,cand:false},
+ {name:"Kopfrechnen",kunde:"Satellitenstation",pro:1,calc:1,brief:"Der Rechner ist ausgefallen. Gebaute Leitungen zeigen keine Kosten mehr, und es gibt keine Kostenzeile. Merke dir die Kosten und gib am Schluss die Offerte selbst ein.",desc:"16 Knoten · Offerte selber zusammenzählen",c:4,r:4,w:15,cand:false},
+ {name:"Perfektion",kunde:"Weltraumbahnhof",pro:1,fog:1,calc:1,perfect:1,brief:"Dreissig Module, Nebel, kein Rechner, und schon der erste Fehler kostet den Auftrag. Nur für Grossmeisterinnen und Grossmeister.",desc:"30 Knoten · Nebel · Kopfrechnen · kein einziger Fehler · 300 Sekunden",c:6,r:5,w:15,cand:false,time:300}];
+const MAIN=8;let calcPending=false;
 const NEED=6;
 let prog={stars:LEVELS.map(()=>0),all:false,best:0,rek:0,firma:"",duels:[],klass:[]};
 try{const p=JSON.parse(localStorage.getItem("netzbau-prim")||"null");if(p&&Array.isArray(p.stars)){prog.stars=LEVELS.map((_,i)=>p.stars[i]||0);prog.all=!!p.all;prog.best=p.best||0;prog.rek=p.rek||0;prog.seen=!!p.seen;prog.sound=!!p.sound;prog.firma=typeof p.firma=="string"?p.firma:"";prog.duels=Array.isArray(p.duels)?p.duels:[];prog.klass=Array.isArray(p.klass)?p.klass:[]}}catch(e){}
 function save(){try{localStorage.setItem("netzbau-prim",JSON.stringify(prog))}catch(e){}}
 function unlocked(i){return prog.all||i==0||prog.stars[i-1]>=NEED}
-function drawLevels(){const box=$("levels");box.innerHTML="";LEVELS.forEach((L,i)=>{const b=document.createElement("button");
+function drawLevels(){const box=$("levels");box.innerHTML="";LEVELS.forEach((L,i)=>{if(i==MAIN){const h=document.createElement("div");h.className="prohead";h.textContent="Profi-Liga: für alle, die schon Legende sind";box.appendChild(h)}const b=document.createElement("button");
   b.disabled=!unlocked(i);b.setAttribute("aria-pressed",career===i);if(prog.stars[i]>=NEED)b.className="full";const meister=prog.stars[i]>=18;
   b.innerHTML=`<span class="no">${i+1}</span><span>${L.name} · ${L.kunde}<small>${unlocked(i)?L.desc:"gesperrt: zuerst sechs Sterne auf Stufe "+i}</small></span><span class="st">${meister?"Meister ":""}★ ${prog.stars[i]}${prog.stars[i]<NEED?"/"+NEED:""}</span>`;
   b.onclick=()=>startLevel(i);box.appendChild(b)});
@@ -239,7 +246,7 @@ function drawLevels(){const box=$("levels");box.innerHTML="";LEVELS.forEach((L,i
   $("unlock").textContent=prog.all?"Stufen wieder sperren":"Alle Stufen freischalten";
   $("sDone").textContent=prog.stars.reduce((a,b)=>a+b,0)}
 let probe=false;
-function startLevel(i){probe=false;duel=null;mara=null;rep_=null;showRank(null);career=i;const L=LEVELS[i];mode="prim";$("mPrim").setAttribute("aria-pressed",true);$("mFree").setAttribute("aria-pressed",false);
+function startLevel(i){probe=false;calcPending=false;duel=null;mara=null;rep_=null;showRank(null);career=i;const L=LEVELS[i];mode="prim";$("mPrim").setAttribute("aria-pressed",true);$("mFree").setAttribute("aria-pressed",false);
   net=randomNet(L.c,L.r,L.w,L.name);start()}
 function stopTimer(){if(tick){clearInterval(tick);tick=null}}
 const MSIZE=[[3,2],[4,2],[3,3],[4,3],[4,3],[4,4],[5,4],[6,4]];
@@ -352,7 +359,7 @@ function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.set
 let R=Math.random;function rnd(n){return Math.floor(R()*n)}
 function seeded(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function randomNet(cols,rows,maxW,name){
-  const nodes={},L="ABCDEFGHJKLMNPQRSTUVWXYZ";let i=0;const id=(x,y)=>L[y*cols+x];
+  const nodes={},L="ABCDEFGHJKLMNPQRSTUVWXYZabdefghkmnpqrt";let i=0;const id=(x,y)=>L[y*cols+x];
   for(let y=0;y<rows;y++)for(let x=0;x<cols;x++)nodes[L[i++]]=[L[i-1],x*2,y*2];
   let E=[];
   for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
@@ -390,7 +397,8 @@ function draw(){
     let cl="edge";if(isBuilt(a,b))cl+=" on";else if(flash==k)cl+=" no";else if(showC&&cs.has(k))cl+=" cand";if(hintKey==k&&!isBuilt(a,b))cl+=" hint";
     const g=el("g",{class:cl,tabindex:0,role:"button","aria-label":`Leitung ${a}–${b}, Kosten ${c}`},s);
     const L={x1,y1,x2,y2};el("line",{...L,class:"eo"},g);el("line",{...L,class:"ei"},g);el("line",{...L,class:"ed"},g);
-    const mx=(x1+x2)/2,my=(y1+y2)/2,t=el("g",{class:"tag"},g);el("rect",{x:mx-27,y:my-21,width:54,height:42,rx:21},t);el("text",{x:mx,y:my+10},t).textContent=c;
+    const mx=(x1+x2)/2,my=(y1+y2)/2,t=el("g",{class:"tag"},g);el("rect",{x:mx-27,y:my-21,width:54,height:42,rx:21},t);const LV=career!=null?LEVELS[career]:null,hideB=LV&&LV.calc&&(!done||calcPending)&&isBuilt(a,b),fogged=LV&&LV.fog&&!done&&!isBuilt(a,b)&&!inNet.has(a)&&!inNet.has(b);
+    el("text",{x:mx,y:my+10},t).textContent=hideB?"":fogged?"?":c;if(hideB||fogged)g.setAttribute("aria-label",`Leitung ${a}–${b}`);
     el("line",{...L,class:"hit"},g);
     g.addEventListener("click",()=>clickEdge(e));g.addEventListener("keydown",ev=>{if(ev.key=="Enter"||ev.key==" "){ev.preventDefault();clickEdge(e)}});
   });
@@ -400,11 +408,11 @@ function draw(){
     g.addEventListener("click",()=>clickNode(k));
     if(named&&net.nodes[k][0]!=k){const T=LT[labelPos(k,P)];el("text",{x:x+T[0],y:y+T[1],"text-anchor":T[2],class:"nm"},s).textContent=net.nodes[k][0]}
   }
-  const cost=built.reduce((t,e)=>t+e[2],0);$("cost").textContent=cost;
-  $("kz").textContent=built.length?built.map(e=>e[2]).join(" + ")+(built.length>1?" = "+cost:""):(net.unit||"");
-  const tb=$("steps").tBodies[0];tb.innerHTML="";built.forEach((e,i)=>{const r=tb.insertRow();r.insertCell().textContent=i+1;r.insertCell().textContent=e[0]+"–"+e[1];r.insertCell().textContent=e[2]});
+  const cost=built.reduce((t,e)=>t+e[2],0),HC=career!=null&&LEVELS[career].calc&&(!done||calcPending);$("cost").textContent=HC?"?":cost;
+  $("kz").textContent=HC?"Kopfrechnen: Die Kostenzeile fehlt.":built.length?built.map(e=>e[2]).join(" + ")+(built.length>1?" = "+cost:""):(net.unit||"");
+  const tb=$("steps").tBodies[0];tb.innerHTML="";built.forEach((e,i)=>{const r=tb.insertRow();r.insertCell().textContent=i+1;r.insertCell().textContent=e[0]+"–"+e[1];r.insertCell().textContent=HC?"?":e[2]});
   $("sErr").textContent=errors;$("sStreak").textContent=streak;drawLevels();showTimer();
-  $("bhear").hidden=career==null;$("check").hidden=mode!="free";$("helpwrap").style.display=mode=="prim"&&career==null?"":"none";
+  $("bhear").hidden=career==null||!!LEVELS[career].pro;$("check").hidden=mode!="free";$("helpwrap").style.display=mode=="prim"&&career==null?"":"none";
   $("tip").disabled=mode!="prim"||done||inNet.size==0||!!duel||!!mara;maraInfo();
   $("next").hidden=!((career!=null||mara||mode=="repair")&&done)||(mara&&mara.lives<=0);
   const n2=$("next2"),was=n2.hidden;n2.hidden=$("next").hidden;if(was&&!n2.hidden){try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}}
@@ -424,9 +432,9 @@ function bad(e,t){errors++;flash=key(e[0],e[1]);
     say(t+" Das war das dritte Leben. Marathon beendet nach "+mara.score+" Netzen."+(rec?" Neuer Rekord!":" Dein Rekord: "+prog.best+".")+" Klicke auf «Marathon» für einen neuen Versuch.","bad");draw();return}
     t+=" Noch "+mara.lives+" Leben."}
   if(career!=null&&mode=="prim"&&!done){
-    if(errors>=3){stopTimer();hintKey=null;say(t+" Das war der dritte Fehler. Auftrag verloren.","bad");draw();const cv=career,L=LEVELS[cv];
-      setTimeout(()=>{if(career===cv)card({k:"Drei Fehler",t:"Auftrag verloren",p:"«"+L.kunde+"» hat den Auftrag an die Konkurrenz vergeben. Du bekommst ein neues Netz. Vergleiche zuerst alle Kandidaten, dann baue die günstigste Leitung.",sm:1,a:["",null],b:["Nochmals versuchen",()=>{pclose();startLevel(cv)}]})},900);return}
-    t+=" Fehler "+errors+" von 3."}
+    const LIM=LEVELS[career].perfect?1:3;if(errors>=LIM){stopTimer();hintKey=null;say(t+(LIM==1?" Bei «Perfektion» ist schon der erste Fehler zu viel.":" Das war der dritte Fehler.")+" Auftrag verloren.","bad");draw();const cv=career,L=LEVELS[cv];
+      setTimeout(()=>{if(career===cv)card({k:LIM==1?"Ein Fehler":"Drei Fehler",t:"Auftrag verloren",p:"«"+L.kunde+"» hat den Auftrag an die Konkurrenz vergeben. Du bekommst ein neues Netz. Vergleiche zuerst alle Kandidaten, dann baue die günstigste Leitung.",sm:1,a:["",null],b:["Nochmals versuchen",()=>{pclose();startLevel(cv)}]})},900);return}
+    t+=" Fehler "+errors+" von "+LIM+"."}
   if((probe&&net===NETS.a1||career!=null&&LEVELS[career].auto)&&inNet.size>0){const c=cheapest();if(c){hintKey=key(c[0],c[1]);t+=" Die blau blinkende Leitung ist die richtige."}}
   say(t,"bad");draw();const f=flash;setTimeout(()=>{if(flash==f){flash=null;draw()}},1100)}
 function clickEdge(e){
@@ -450,19 +458,25 @@ function clickEdge(e){
       const dc=duel.code;sendScore(dc,pts,duel.r).then(ok=>{if(duel&&duel.code==dc&&done){say($("msg").textContent+(ok?" Euer Resultat ist am Beamer.":" Senden ging nicht: Meldet es der Lehrperson."),"win")}if(ok)setTimeout(()=>showClassTop(dc),2500)});
       say("Offerte "+cost+" in "+sec+" Sekunden, Fehler: "+errors+". Das gibt "+pts+" Punkte und Rang "+rk+" von 4. Firma: "+(prog.firma||"ohne Namen")+".","win")}
     else if(career!=null){
-      lastStars=timedOut?1:(errors==0&&!tipUsed?3:(errors<=2?2:1));
-      const before=prog.stars[career]>=NEED;prog.stars[career]+=lastStars;save();
-      let t="Offerte "+cost+" ist das günstigste Netz. "+"★".repeat(lastStars)+"☆".repeat(3-lastStars)+" ";
-      t+=lastStars==3?"Fehlerfrei und ohne Tipp.":timedOut?"Nächstes Mal schneller.":errors>2?"Fehler: "+errors+". Für mehr Sterne höchstens zwei Fehler.":tipUsed&&errors==0?"Ohne Tipp gibt es drei Sterne.":"Fehler: "+errors+".";
-      if(!before&&prog.stars[career]>=NEED){const last=career>=LEVELS.length-1;
-        if(last)card({k:"Kampagne abgeschlossen",t:"Legende",p:"Du hast alle acht Stufen geschafft. Die Netzbau AG gehört jetzt dir. Marathon und Reklamationen warten.",aud:8,a:["▶ Anhören",()=>hear(8)],b:["Weiter",pclose]});
-        else brief(career+1,true);t+=" Befördert!"}
-      say(t,"win")}
+      if(LEVELS[career].calc){const cv=career;stopTimer();calcPending=true;say("Alle Knoten sind am Netz. Wie hoch ist deine Offerte?");
+        card({k:"Kopfrechnen",t:"Deine Offerte?",p:"Zähle die Kosten aller gebauten Leitungen zusammen und tippe die Summe ein.",sm:1,inp:1,a:["",null],b:["Offerte abgeben",()=>{const v=parseInt($("pinp").value,10);calcPending=false;pclose();
+          if(v===cost)finishCareer(cost,cv);else{prog.stars[cv]+=0;say("Falsch gerechnet: Du hast "+(isNaN(v)?"nichts":v)+" eingegeben, die Offerte war "+cost+". Keine Sterne für dieses Netz.","bad");$("cost").textContent=cost;draw()}}]})}
+      else finishCareer(cost,career)}
     else if(probe&&net===NETS.a1){probe=false;say("Offerte "+cost+": Der Campingplatz ist am Netz. Probeauftrag bestanden.","win");brief(0,false,"Probeauftrag bestanden")}
     else say("Fertig! Offerte: "+cost+". Das ist das günstigste Netz. "+(errors==0?"Kein einziger Fehler.":"Fehler unterwegs: "+errors+"."),"win")}
   else say("Gebaut: "+(ia?a:b)+"–"+(ia?b:a)+" ("+c+"). Weiter mit dem nächsten günstigsten Kandidaten.","ok");
   draw();
 }
+function finishCareer(cost,cv){
+      lastStars=timedOut?1:(errors==0&&!tipUsed?3:(errors<=2?2:1));
+      const before=prog.stars[cv]>=NEED;prog.stars[cv]+=lastStars;save();
+      let t="Offerte "+cost+" ist das günstigste Netz. "+"★".repeat(lastStars)+"☆".repeat(3-lastStars)+" ";
+      t+=lastStars==3?"Fehlerfrei und ohne Tipp.":timedOut?"Nächstes Mal schneller.":errors>2?"Fehler: "+errors+". Für mehr Sterne höchstens zwei Fehler.":tipUsed&&errors==0?"Ohne Tipp gibt es drei Sterne.":"Fehler: "+errors+".";
+      if(!before&&prog.stars[cv]>=NEED){const last=cv>=LEVELS.length-1;
+        if(cv==MAIN-1)card({k:"Kampagne abgeschlossen",t:"Legende",p:"Du hast alle acht Stufen geschafft. Die Netzbau AG gehört jetzt dir. Wer noch mehr will: Die Profi-Liga mit vier sehr schweren Aufträgen ist jetzt offen.",aud:8,a:["▶ Anhören",()=>hear(8)],b:["Profi-Liga starten",()=>{pclose();brief(MAIN,true)}]});
+        else if(last)card({k:"Profi-Liga geschafft",t:"Grossmeister",p:"Unglaublich: Du hast auch die Profi-Liga geschafft. Zeig es der Lehrperson!",sm:1,a:["",null],b:["Weiter",pclose]});
+        else brief(cv+1,true);t+=" Befördert!"}
+      say(t,"win")}
 function check(){
   const ids=Object.keys(net.nodes);if(!built.length){say("Du hast noch keine Leitung gebaut.","bad");return}
   const s=new Set([built[0][0]]);let ch=true;while(ch){ch=false;for(const[a,b]of built){if(s.has(a)!=s.has(b)){s.add(a);s.add(b);ch=true}}}
@@ -485,15 +499,15 @@ function pclose(){pclear();$("promo").hidden=true}
 function card(o){pclear();const P=$("promo");P.className=o.vid?"v":(o.net||o.sm)?"n":"";$("pk").textContent=o.k;$("pt").textContent=o.t;$("pp").textContent=o.p||"";
   $("phear").textContent=o.a[0];pA=o.a[1];$("phear").style.display=o.a[0]?"":"none";$("pgo").textContent=o.b[0];pnext=o.b[1];$("pgo").style.display=o.b[0]?"":"none";$("pskip").style.display=o.skip?"":"none";
   if(o.vid){const v=$("pvid");v.style.display="";v.muted=!sound;v.src="data:video/mp4;base64,"+VIDS[o.vid];const p=v.play();if(p&&p.catch)p.catch(()=>{})}
-  if(o.net)mini(o.net,o.plain);P.hidden=false;P.scrollTop=0;if(o.aud!=null&&sound)hear(o.aud)}
+  if(o.net)mini(o.net,o.plain);const I=$("pinp");I.style.display=o.inp?"":"none";I.value="";P.hidden=false;P.scrollTop=0;if(o.inp)setTimeout(()=>I.focus(),50);if(o.aud!=null&&AUD[o.aud]&&sound)hear(o.aud)}
 function primOrder(N){const s=new Set([N.start]),o=[],n=Object.keys(N.nodes).length;while(s.size<n){let b=null;for(const e of N.edges)if(s.has(e[0])!=s.has(e[1])&&(!b||e[2]<b[2]))b=e;if(!b)break;o.push(b);s.add(b[0]);s.add(b[1])}return o}
 function mini(N,plain){const s=$("pnet");s.style.display="";const v=Object.values(N.nodes),W=Math.max(...v.map(n=>n[1]))*50+60,H=Math.max(...v.map(n=>n[2]))*50+60;s.setAttribute("viewBox",`0 0 ${W} ${H}`);
   const p=k=>[N.nodes[k][1]*50+30,N.nodes[k][2]*50+30];
   const ln=(e,c,d)=>{const[x1,y1]=p(e[0]),[x2,y2]=p(e[1]);const l=el("line",{x1,y1,x2,y2,class:c},s);if(d!=null)l.style.animationDelay=d+"s"};
   N.edges.forEach(e=>ln(e,""));const o=plain?[]:primOrder(N),step=Math.min(.5,6/o.length);o.forEach((e,i)=>ln(e,"g",.6+i*step));
   for(const k in N.nodes){const[x,y]=p(k);el("circle",{cx:x,cy:y,r:11},s)}}
-function brief(i,promoted,kk){const L=LEVELS[i];card({k:kk?kk+" · Auftrag 1 von "+LEVELS.length:promoted?"Befördert":"Auftrag "+(i+1)+" von "+LEVELS.length,t:L.name,p:"Neuer Auftrag: «"+L.kunde+"». "+L.brief,net:randomNet(L.c,L.r,L.w,""),aud:i,
-  a:["▶ Anhören",()=>hear(i)],b:["Auftrag annehmen",()=>{prog.seen=true;save();pclose();startLevel(i)}]})}
+function brief(i,promoted,kk){const L=LEVELS[i];card({k:L.pro?"Profi-Liga · Auftrag "+(i-MAIN+1)+" von "+(LEVELS.length-MAIN):kk?kk+" · Auftrag 1 von "+MAIN:promoted?"Befördert":"Auftrag "+(i+1)+" von "+MAIN,t:L.name,p:"Neuer Auftrag: «"+L.kunde+"». "+L.brief,net:randomNet(L.c,L.r,L.w,""),aud:L.pro?null:i,
+  a:[AUD[i]&&!L.pro?"▶ Anhören":"",()=>hear(i)],b:["Auftrag annehmen",()=>{prog.seen=true;save();pclose();startLevel(i)}]})}
 function setSound(b){sound=b;prog.sound=b;save();sndUI()}
 function intro(n){
   if(n==0)card({k:"Willkommen bei der",t:"Netzbau AG",p:"Du beginnst heute deine Lehre und arbeitest dich Auftrag für Auftrag hoch bis zur Legende. Stecke jetzt deine Kopfhörer ein und klicke auf «Mit Ton starten».",a:["Ohne Ton starten",()=>{setSound(false);intro(2)}],b:["Mit Ton starten",()=>{setSound(true);intro(2)}],skip:1});
@@ -503,7 +517,7 @@ function intro(n){
 function startProbe(){prog.seen=true;save();pclose();mode="prim";$("help").checked=true;try{pick.value="a1"}catch(e){}load(NETS.a1);probe=true;draw();
   say("Probeauftrag Campingplatz: Wähle einen Startknoten, zum Beispiel die Rezeption. Die grünen Leitungen sind deine Kandidaten. Baue immer die günstigste.")}
 const aud=new Audio();let sound=false;
-function hear(i){try{aud.pause();aud.src="data:audio/mpeg;base64,"+AUD[i];const p=aud.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}
+function hear(i){if(!AUD[i])return;try{aud.pause();aud.src="data:audio/mpeg;base64,"+AUD[i];const p=aud.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}
 function quiet(){try{aud.pause()}catch(e){}}
 function playVid(k){quiet();const v=$("vid");v.src="data:video/mp4;base64,"+VIDS[k];$("vmodal").hidden=false;const p=v.play();if(p&&p.catch)p.catch(()=>{})}
 sound=!!prog.sound;function sndUI(){$("snd").textContent=sound?"Ton: an":"Ton: aus";$("snd").setAttribute("aria-pressed",sound)}sndUI();
