@@ -353,7 +353,7 @@ function startDuel(){$("ctop").textContent="";let code=parseInt($("code").value,
   waitDuel(code,chk.n)}
 function beginDuel(code,n,rr){stopWait();pclose();probe=false;
   career=null;mara=null;rep_=null;mode="prim";R=seeded(code*10+n+((rr||0)%100000)*100);net=randomNet(4,n==8?2:n==12?3:4,12,"Wettkampf");const r=R;R=Math.random;
-  duel={code,n,r:rr||0,rivals:FIRMS.map((f,i)=>({f,p:Math.round((n==8?560:n==12?430:320)+i*90+r()*70)}))};$("ctop").textContent="";start()}
+  try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}duel={code,n,r:rr||0,rivals:FIRMS.map((f,i)=>({f,p:Math.round((n==8?560:n==12?430:320)+i*90+r()*70)}))};$("ctop").textContent="";start()}
 function showRank(me){const box=$("rank");if(!duel){closeK();box.innerHTML="";return}
   const rows=duel.rivals.map(x=>({f:x.f,p:x.p})).concat(me!=null?[{f:prog.firma||"Deine Firma",p:me,me:true}]:[]).sort((a,b)=>b.p-a.p);
   box.innerHTML="<table><thead><tr><th>Rang</th><th>Firma</th><th>Punkte</th></tr></thead><tbody></tbody></table>";
@@ -469,7 +469,7 @@ function clickEdge(e){
     if(mara){mara.score++;mara.round++;if(mara.score>prog.best){prog.best=mara.score;save()}
       say("Geschafft! Offerte "+cost+". Gelöst im Marathon: "+mara.score+". Das nächste Netz wird "+(mara.round<MSIZE.length?"grösser.":"wieder 24 Knoten haben."),"win")}
     else if(duel){const sec=Math.round((Date.now()-t0)/1000),pts=Math.max(0,1000-4*sec-80*errors),liveK=!!(wes&&kcode==duel.code&&wes.readyState==1),rk=liveK?0:showRank(pts);
-      if(liveK){$("rank").innerHTML="";kmsgs.push({f:prog.firma||"Firma ohne Namen",p:pts,c:duel.code,r:duel.r||0,t:Date.now()});drawTop(duel.code,topFrom(kmsgs,duel.code,duel.r))}prog.duels.push({c:duel.code,p:pts});prog.duels=prog.duels.slice(-30);save();showBest();
+      if(liveK){$("rank").innerHTML="";kmsgs.push({f:prog.firma||"Firma ohne Namen",p:pts,c:duel.code,r:duel.r||0,t:Date.now()});drawTop(duel.code,topFrom(kmsgs,duel.code,duel.r));try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}}prog.duels.push({c:duel.code,p:pts});prog.duels=prog.duels.slice(-30);save();showBest();
       const dc=duel.code;sendScore(dc,pts,duel.r).then(ok=>{if(duel&&duel.code==dc&&done){say($("msg").textContent+(ok?" Euer Resultat ist am Beamer.":" Senden ging nicht: Meldet es der Lehrperson."),"win")}if(ok)setTimeout(()=>showClassTop(dc),2500)});
       say("Offerte "+cost+" in "+sec+" Sekunden, Fehler: "+errors+". Das gibt "+pts+" Punkte"+(liveK?"":" und Rang "+rk+" von 4")+". Firma: "+(prog.firma||"ohne Namen")+".","win")}
     else if(career!=null){
