@@ -119,20 +119,20 @@ input#firma{font:700 17px var(--fb);border:2px solid var(--ink);border-radius:8p
 #crank{background:var(--ink);color:#fff;border-radius:10px;padding:14px 18px;margin:8px 0;display:grid;grid-template-columns:auto 1fr;gap:4px 18px;align-items:center}#crank[hidden]{display:none}
 #crank b{font:800 64px/1 var(--fd);color:var(--on);grid-row:span 2}#crank span{font-size:20px;font-weight:700}#crank small{font-size:15px;color:#c9d1de}
 #olive{font-size:15px;font-weight:700;margin:1vh 0;padding:6px 10px;border-radius:8px}
-#olobby{font-size:clamp(16px,2.4vh,24px);font-weight:700;margin:1.5vh 0}
+#olobby{font-size:clamp(15px,2.2vh,22px);font-weight:700;margin:2vh 0 0}
 #ostart{font-size:clamp(20px,3vh,30px);padding:14px 40px;background:var(--on);border-color:var(--on);width:auto;margin-bottom:1.5vh}#ostart:disabled{opacity:.55}
 #olive.on{background:#DFF3E7}
 #olive.off{background:#FBE0E1}
 #mybest{font-size:14px;margin-top:8px;font-weight:700}
 input#pin{font:800 22px var(--fd);letter-spacing:.2em;text-align:center;border:2px solid var(--ink);border-radius:8px;padding:5px;width:100%;color:var(--ink)}
 input#code{font:800 26px var(--fd);letter-spacing:.2em;text-align:center;border:2px solid var(--ink);border-radius:8px;padding:5px;width:100%;color:var(--ink)}
-#overlay{position:fixed;inset:0;background:var(--ink);color:#fff;z-index:9;display:grid;place-items:center;text-align:center}
+#overlay{position:fixed;inset:0;overflow-y:auto;background:var(--ink);color:#fff;z-index:9;display:flex;text-align:center;padding:2vh 0;box-sizing:border-box}
 #overlay[hidden]{display:none}
 #overlay small{font:700 3vw var(--fd);text-transform:uppercase;letter-spacing:.1em;display:block}
-#overlay b{font:800 15vw/1 var(--fd);color:var(--on);letter-spacing:.06em;display:block}
+#overlay b{font:800 min(15vw,24vh)/1 var(--fd);color:var(--on);letter-spacing:.06em;display:block}
 #overlay span{font-size:1.6vw;display:block;margin-bottom:3vh}
 #overlay button{width:auto;padding:10px 24px}
-.ogrid{display:grid;grid-template-columns:1fr 1fr;gap:4vw;align-items:center;width:92vw}
+.ogrid{display:grid;grid-template-columns:1fr 1fr;gap:4vw;align-items:center;width:92vw;margin:auto}
 @media(max-width:800px){.ogrid{grid-template-columns:1fr}}
 .obtn{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .opod{background:#fff;color:var(--ink);border-radius:14px;padding:3vh 2.5vw;text-align:left}
@@ -168,11 +168,11 @@ input#code{font:800 26px var(--fd);letter-spacing:.2em;text-align:center;border:
 details summary{font:700 15px var(--fd);text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
 #hduel{background:var(--on)!important;color:var(--ink)!important;border-color:var(--on)!important;font-weight:800;font-size:1.05em;animation:hd 2.4s ease-in-out infinite}@keyframes hd{50%{box-shadow:0 0 0 5px rgba(255,196,0,.35)}}
 .duelcard{background:var(--on);border:3px solid var(--ink)}.duelcard summary{font-size:22px!important;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px}.duelcard summary::-webkit-details-marker{display:none}.duelcard summary::after{content:"Öffnen ▾";font:800 14px var(--fb);text-transform:none;letter-spacing:0;background:var(--ink);color:#fff;padding:8px 12px;border-radius:10px;white-space:nowrap}.duelcard details[open] summary::after{content:"Zu ▴"}.duelcard .hint{color:var(--ink)}
-#olobby .kchips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:1vh}.kchip{width:auto!important;padding:6px 12px!important;font:700 clamp(14px,1.6vh,20px) var(--fb)!important;background:rgba(255,255,255,.12)!important;color:#fff!important;border:2px solid rgba(255,255,255,.5)!important;border-radius:99px!important;cursor:pointer}.kchip:hover{border-color:#fff!important}.kchip.arm{background:var(--no)!important;border-color:var(--no)!important}#otop .kname{cursor:pointer}#otop .kname:hover{text-decoration:line-through}
+#olobby .kchips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:1vh;max-height:23vh;overflow-y:auto}.kchip{width:auto!important;padding:6px 12px!important;font:700 clamp(14px,1.6vh,20px) var(--fb)!important;background:rgba(255,255,255,.12)!important;color:#fff!important;border:2px solid rgba(255,255,255,.5)!important;border-radius:99px!important;cursor:pointer}.kchip:hover{border-color:#fff!important}.kchip.arm{background:var(--no)!important;border-color:var(--no)!important}#otop .kname{cursor:pointer}#otop .kname:hover{text-decoration:line-through}
 </style></head><body>
 <div id="overlay" hidden><div class="ogrid"><div><small>Spielnummer</small><b id="ocode">––––</b><span id="ohint"></span>
-  <p id="olobby"></p>
-  <div class="obtn"><button id="o8">Start: 8 Knoten ▶</button><button id="o12">Start: 12 Knoten ▶</button><button id="o16">Start Profi: 16 Knoten ▶</button><button id="o24">Start Mega: 24 Knoten ▶</button><button id="o35">Start Master: 35 Knoten ▶</button><button id="oclose">Schliessen</button></div></div>
+  <div class="obtn"><button id="o8">Start: 8 Knoten ▶</button><button id="o12">Start: 12 Knoten ▶</button><button id="o16">Start Profi: 16 Knoten ▶</button><button id="o24">Start Mega: 24 Knoten ▶</button><button id="o35">Start Master: 35 Knoten ▶</button><button id="oclose">Schliessen</button></div>
+  <div id="olobby"></div></div>
  <div class="opod"><small>Top 3 der Klasse</small><ol id="otop"></ol><p id="ototal"></p><p id="olive" class="off"></p><p id="ocount"></p>
   <form id="oform"><input id="oname" maxlength="18" placeholder="Firma" aria-label="Firma"><input id="opts" inputmode="numeric" maxlength="4" placeholder="Punkte" aria-label="Punkte"><button>Eintragen</button></form>
   <button class="link" id="oclear" type="button">Rangliste leeren</button></div></div></div>
