@@ -134,7 +134,7 @@ input#code{font:800 26px var(--fd);letter-spacing:.2em;text-align:center;border:
 #overlay button{width:auto;padding:10px 24px}
 .ogrid{display:grid;grid-template-columns:1fr 1fr;gap:4vw;align-items:center;width:92vw}
 @media(max-width:800px){.ogrid{grid-template-columns:1fr}}
-.obtn{display:flex;gap:10px;justify-content:center}
+.obtn{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .opod{background:#fff;color:var(--ink);border-radius:14px;padding:3vh 2.5vw;text-align:left}
 .opod small{font-size:2vw!important;margin-bottom:1.5vh}
 #otop{list-style:none;margin:0;padding:0;display:grid;gap:1.2vh;min-height:24vh}
@@ -172,7 +172,7 @@ details summary{font:700 15px var(--fd);text-transform:uppercase;letter-spacing:
 </style></head><body>
 <div id="overlay" hidden><div class="ogrid"><div><small>Spielnummer</small><b id="ocode">––––</b><span id="ohint"></span>
   <p id="olobby"></p>
-  <div class="obtn"><button id="o8">Start: 8 Knoten ▶</button><button id="o12">Start: 12 Knoten ▶</button><button id="o16">Start Profi: 16 Knoten ▶</button><button id="oclose">Schliessen</button></div></div>
+  <div class="obtn"><button id="o8">Start: 8 Knoten ▶</button><button id="o12">Start: 12 Knoten ▶</button><button id="o16">Start Profi: 16 Knoten ▶</button><button id="o24">Start Mega: 24 Knoten ▶</button><button id="oclose">Schliessen</button></div></div>
  <div class="opod"><small>Top 3 der Klasse</small><ol id="otop"></ol><p id="ototal"></p><p id="olive" class="off"></p><p id="ocount"></p>
   <form id="oform"><input id="oname" maxlength="18" placeholder="Firma" aria-label="Firma"><input id="opts" inputmode="numeric" maxlength="4" placeholder="Punkte" aria-label="Punkte"><button>Eintragen</button></form>
   <button class="link" id="oclear" type="button">Rangliste leeren</button></div></div></div>
@@ -291,7 +291,7 @@ function clickRep(e){const[a,b,c]=e,k=key(a,b);
 const PIN="5068";let tcode=0;
 function win(){return Math.floor(Date.now()/300000)}
 function codeFor(w,n){let x=(Math.imul(w,2654435761)+n*40503+771919)>>>0;x=(x^(x>>>13))>>>0;x=Math.imul(x,0x5bd1e995)>>>0;x=(x^(x>>>15))>>>0;return 1000+(x%9000)}
-function checkCode(c){const w=win();for(const d of[0,-1,-2,1])for(const n of[8,12,16])if(codeFor(w+d,n)==c)return{n,w:w+d};return null}
+function checkCode(c){const w=win();for(const d of[0,-1,-2,1])for(const n of[8,12,16,24])if(codeFor(w+d,n)==c)return{n,w:w+d};return null}
 const DB="https://netzbau-5089e-default-rtdb.europe-west1.firebasedatabase.app/d/", room=c=>(window.__tp||"")+c, url=c=>DB+room(c)+".json";
 let tOff=0;const PC="-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz",NOLIVE="Keine Live-Verbindung. Resultate von Hand eintragen.";
 function idTime(id){let t=0;for(let i=0;i<8;i++)t=t*64+PC.indexOf(id[i]);return t}
@@ -304,7 +304,7 @@ function stream(c,onAll,onOne,onOpen,onErr){const e=new EventSource(url(c));e.on
   e.addEventListener("put",ev=>{try{const m=JSON.parse(ev.data);if(m.path=="/")onAll(mapMsgs(m.data));else if(fresh(m.data))onOne(m.data)}catch(x){}});return e}
 let es=null, live=false, pollT=null, lastOk=0;
 let tmsgs=[],curR={},sentR={};
-function lastStart(a,code){let l=null;(a||[]).forEach(o=>{if(o&&o.s&&parseInt(o.c,10)==code&&o.r)l={r:parseInt(o.r,10)||0,n:[8,12,16].includes(parseInt(o.n,10))?parseInt(o.n,10):8}});return l}
+function lastStart(a,code){let l=null;(a||[]).forEach(o=>{if(o&&o.s&&parseInt(o.c,10)==code&&o.r)l={r:parseInt(o.r,10)||0,n:[8,12,16,24].includes(parseInt(o.n,10))?parseInt(o.n,10):8}});return l}
 function isKick(o){return !!o&&typeof o.j=="string"&&parseInt(o.n,10)==-1}
 function joinsOf(a,code){const j=new Set();(a||[]).forEach(o=>{if(o&&typeof o.j=="string"&&parseInt(o.c,10)==code){const f=o.j.trim().slice(0,18);if(!f)return;if(isKick(o))j.delete(f);else j.add(f)}});return j}
 function kicksOf(a,code){const k={};(a||[]).forEach(o=>{if(isKick(o)&&parseInt(o.c,10)==code){const f=o.j.trim().slice(0,18);k[f]=Math.max(k[f]||0,o.t||Date.now()+tOff)}});return k}
@@ -367,8 +367,8 @@ function startDuel(){$("ctop").textContent="";let code=parseInt($("code").value,
   if(!chk){say("Diese Spielnummer gilt nicht oder ist abgelaufen. Die richtige Nummer steht am Beamer, sobald die Lehrperson das Klassenduell startet.","bad");return}
   waitDuel(code,chk.n)}
 function beginDuel(code,n,rr){stopWait();pclose();probe=false;
-  career=null;mara=null;rep_=null;mode="prim";R=seeded(code*10+n+((rr||0)%100000)*100);net=randomNet(4,n==8?2:n==12?3:4,12,"Wettkampf");const r=R;R=Math.random;
-  try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}duel={code,n,r:rr||0,rivals:FIRMS.map((f,i)=>({f,p:Math.round((n==8?560:n==12?430:320)+i*90+r()*70)}))};$("ctop").textContent="";start()}
+  career=null;mara=null;rep_=null;mode="prim";R=seeded(code*10+n+((rr||0)%100000)*100);net=randomNet(n==24?6:4,n==8?2:n==12?3:4,12,"Wettkampf");const r=R;R=Math.random;
+  try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}duel={code,n,r:rr||0,rivals:FIRMS.map((f,i)=>({f,p:Math.round((n==8?560:n==12?430:n==16?320:260)+i*90+r()*70)}))};$("ctop").textContent="";start()}
 function showRank(me){const box=$("rank");if(!duel){closeK();box.innerHTML="";return}
   const rows=duel.rivals.map(x=>({f:x.f,p:x.p})).concat(me!=null?[{f:prog.firma||"Deine Firma",p:me,me:true}]:[]).sort((a,b)=>b.p-a.p);
   box.innerHTML="<table><thead><tr><th>Rang</th><th>Firma</th><th>Punkte</th></tr></thead><tbody></tbody></table>";
@@ -456,7 +456,7 @@ function toNet(){const go=()=>{try{window.scrollTo(0,0)}catch(e){}};go();request
 function start(){$("crank").hidden=true;toNet();inNet=new Set();built=[];errors=0;done=false;flash=null;hintKey=null;tipUsed=false;timedOut=false;stopTimer();
   if(career!=null&&LEVELS[career].time){timeLeft=LEVELS[career].time}
   if(mara){say("Marathon, Runde "+(mara.round+1)+": "+Object.keys(net.nodes).length+" Knoten. Wähle einen Startknoten. Du hast noch "+mara.lives+" Leben.");draw();return}
-  if(duel){showRank(null);say("Wettkampf "+duel.code+": Wähle einen Startknoten. Die Zeit läuft ab dem ersten Klick. Jeder Fehler kostet 80 Punkte.");draw();return}
+  if(duel){if(wes&&kcode==duel.code)$("rank").innerHTML="";else showRank(null);say("Wettkampf "+duel.code+": Wähle einen Startknoten. Die Zeit läuft ab dem ersten Klick. Jeder Fehler kostet 80 Punkte.");draw();return}
   say(career!=null?"Auftrag «"+LEVELS[career].kunde+"»: "+LEVELS[career].brief+" Wähle einen Startknoten."+(LEVELS[career].time?" Die Uhr läuft ab dem ersten Klick.":""):mode=="prim"?(net.rand?"Wähle einen beliebigen Startknoten.":"Wähle einen Startknoten. Im Dossier startest du bei "+nm(net.start)+"."):"Baue das günstigste Netz, das alle Knoten anschliesst.");draw()}
 function clickNode(k){if(mode!="prim"||done)return;if(inNet.size==0){inNet.add(k);t0=Date.now();
   if(career!=null&&LEVELS[career].time){tick=setInterval(()=>{timeLeft--;if(timeLeft<=0){timeLeft=0;timedOut=true;stopTimer();if(!done)say("Zeit abgelaufen. Die Konkurrenz hat offeriert. Baue trotzdem fertig, es gibt noch einen Stern.","bad")}showTimer()},1000)}say("Start bei "+nm(k)+". Welcher Kandidat ist der günstigste?");draw()}}
@@ -487,7 +487,7 @@ function clickEdge(e){
     const cost=built.reduce((t,x)=>t+x[2],0);
     if(mara){mara.score++;mara.round++;if(mara.score>prog.best){prog.best=mara.score;save()}
       say("Geschafft! Offerte "+cost+". Gelöst im Marathon: "+mara.score+". Das nächste Netz wird "+(mara.round<MSIZE.length?"grösser.":"wieder 24 Knoten haben."),"win")}
-    else if(duel){const sec=Math.round((Date.now()-t0)/1000),pts=Math.max(0,1000-4*sec-80*errors),liveK=!!(wes&&kcode==duel.code&&wes.readyState==1),rk=liveK?0:showRank(pts);
+    else if(duel){const sec=Math.round((Date.now()-t0)/1000),pts=Math.max(0,1000-(duel.n==24?2:4)*sec-80*errors),liveK=!!(wes&&kcode==duel.code&&wes.readyState==1),rk=liveK?0:showRank(pts);
       if(liveK){$("rank").innerHTML="";kmsgs.push({f:prog.firma||"Firma ohne Namen",p:pts,c:duel.code,r:duel.r||0,t:Date.now()});drawTop(duel.code,topFrom(kmsgs,duel.code,duel.r));try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}}prog.duels.push({c:duel.code,p:pts});prog.duels=prog.duels.slice(-30);save();showBest();
       const dc=duel.code;sendScore(dc,pts,duel.r).then(ok=>{if(duel&&duel.code==dc&&done){say($("msg").textContent+(ok?" Euer Resultat ist am Beamer.":" Senden ging nicht: Meldet es der Lehrperson."),"win")}if(ok)setTimeout(()=>showClassTop(dc),2500)});
       say("Offerte "+cost+" in "+sec+" Sekunden, Fehler: "+errors+". Das gibt "+pts+" Punkte"+(liveK?"":" und Rang "+rk+" von 4")+". Firma: "+(prog.firma||"ohne Namen")+".","win")}
@@ -572,7 +572,7 @@ $("hduel").onclick=()=>{const d=$("duelbox");d.open=true;d.closest(".card").scro
 $("lehr").onclick=()=>{$("pinrow").hidden=!$("pinrow").hidden;if(!$("pinrow").hidden)$("pin").focus()};
 $("pingo").onclick=()=>{if($("pin").value===PIN)openBeamer();else{$("pin").value="";say("Falsche PIN. Dieser Bereich ist für die Lehrperson.","bad")}};
 $("pin").addEventListener("keydown",ev=>{if(ev.key=="Enter")$("pingo").click()});
-$("o8").onclick=()=>startRound(8);$("o12").onclick=()=>startRound(12);$("o16").onclick=()=>startRound(16);
+$("o8").onclick=()=>startRound(8);$("o12").onclick=()=>startRound(12);$("o16").onclick=()=>startRound(16);$("o24").onclick=()=>startRound(24);
 $("oclose").onclick=()=>{$("overlay").hidden=true;if(es){es.close();es=null}if(pollT){clearInterval(pollT);pollT=null}};
 $("oform").addEventListener("submit",ev=>{ev.preventDefault();const f=$("oname").value.trim(),p=parseInt($("opts").value,10);const c=tcode;if(!f||!(p>=0&&p<=1000)||!c)return;addKlass({f,p,c,r:curR[c]||0});$("oname").value="";$("opts").value="";showKlass();$("oname").focus()});
 $("oclear").onclick=()=>{prog.klass=[];save();showKlass()};
