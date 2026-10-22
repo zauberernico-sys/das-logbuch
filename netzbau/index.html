@@ -168,6 +168,7 @@ input#code{font:800 26px var(--fd);letter-spacing:.2em;text-align:center;border:
 details summary{font:700 15px var(--fd);text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
 #hduel{background:var(--on)!important;color:var(--ink)!important;border-color:var(--on)!important;font-weight:800;font-size:1.05em;animation:hd 2.4s ease-in-out infinite}@keyframes hd{50%{box-shadow:0 0 0 5px rgba(255,196,0,.35)}}
 .duelcard{background:var(--on);border:3px solid var(--ink)}.duelcard summary{font-size:22px!important;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px}.duelcard summary::-webkit-details-marker{display:none}.duelcard summary::after{content:"Öffnen ▾";font:800 14px var(--fb);text-transform:none;letter-spacing:0;background:var(--ink);color:#fff;padding:8px 12px;border-radius:10px;white-space:nowrap}.duelcard details[open] summary::after{content:"Zu ▴"}.duelcard .hint{color:var(--ink)}
+#olobby .kchips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:1vh}.kchip{width:auto!important;padding:6px 12px!important;font:700 clamp(14px,1.6vh,20px) var(--fb)!important;background:rgba(255,255,255,.12)!important;color:#fff!important;border:2px solid rgba(255,255,255,.5)!important;border-radius:99px!important;cursor:pointer}.kchip:hover{border-color:#fff!important}.kchip.arm{background:var(--no)!important;border-color:var(--no)!important}#otop .kname{cursor:pointer}#otop .kname:hover{text-decoration:line-through}
 </style></head><body>
 <div id="overlay" hidden><div class="ogrid"><div><small>Spielnummer</small><b id="ocode">––––</b><span id="ohint"></span>
   <p id="olobby"></p>
@@ -304,12 +305,15 @@ function stream(c,onAll,onOne,onOpen,onErr){const e=new EventSource(url(c));e.on
 let es=null, live=false, pollT=null, lastOk=0;
 let tmsgs=[],curR={},sentR={};
 function lastStart(a,code){let l=null;(a||[]).forEach(o=>{if(o&&o.s&&parseInt(o.c,10)==code&&o.r)l={r:parseInt(o.r,10)||0,n:[8,12,16].includes(parseInt(o.n,10))?parseInt(o.n,10):8}});return l}
-function joinsOf(a,code){const j=new Set();(a||[]).forEach(o=>{if(o&&typeof o.j=="string"&&parseInt(o.c,10)==code){const f=o.j.trim().slice(0,18);if(f)j.add(f)}});return j}
-function tApply(){const c=tcode;lobby[c]=joinsOf(tmsgs,c);const l=lastStart(tmsgs,c);if(l&&!(sentR[c]&&!tmsgs.some(o=>o&&o.s&&o.r==sentR[c])))curR[c]=l.r;showLobby();showKlass()}
+function isKick(o){return !!o&&typeof o.j=="string"&&parseInt(o.n,10)==-1}
+function joinsOf(a,code){const j=new Set();(a||[]).forEach(o=>{if(o&&typeof o.j=="string"&&parseInt(o.c,10)==code){const f=o.j.trim().slice(0,18);if(!f)return;if(isKick(o))j.delete(f);else j.add(f)}});return j}
+function kicksOf(a,code){const k={};(a||[]).forEach(o=>{if(isKick(o)&&parseInt(o.c,10)==code){const f=o.j.trim().slice(0,18);k[f]=Math.max(k[f]||0,o.t||Date.now()+tOff)}});return k}
+function kickedRes(k,o){const f=(o.f||"").trim().slice(0,18);return k[f]!=null&&(o.t||0)<=k[f]}
+function tApply(){const c=tcode;lobby[c]=joinsOf(tmsgs,c);const kk=kicksOf(tmsgs,c);if(Object.keys(kk).length){const n0=prog.klass.length;prog.klass=prog.klass.filter(x=>!(x.c==c&&kk[x.f]!=null&&!tmsgs.some(o=>typeof o.f=="string"&&o.f.trim().slice(0,18)==x.f&&parseInt(o.c,10)==c&&!kickedRes(kk,o))));if(prog.klass.length!=n0)save()}const l=lastStart(tmsgs,c);if(l&&!(sentR[c]&&!tmsgs.some(o=>o&&o.s&&o.r==sentR[c])))curR[c]=l.r;showLobby();showKlass()}
 function tMsg(o){if(!o)return;tmsgs.push(o);if(tmsgs.length>3000)tmsgs.shift();if(typeof o.f=="string")addKlass(o);else tApply()}
 function pollKlass(){const c=tcode;if($("overlay").hidden||!(c>=1000&&c<=9999))return;
   fetchLobby(c).then(a=>{if(c!=tcode)return;if(a===null){if(!es||es.readyState!=1)setLive(false,NOLIVE);return}lastOk=Date.now();tmsgs=a;a.forEach(o=>{if(o&&typeof o.f=="string")addKlass(o)});tApply();if(!es||es.readyState!=1)setLive(true,"Live: Resultate erscheinen alle paar Sekunden von selbst.")})}
-function addKlass(o){if(!o||typeof o.f!="string")return;const f=o.f.trim().slice(0,18),p=parseInt(o.p,10),c=parseInt(o.c,10),r=parseInt(o.r,10)||0;if(!f||!(p>=0&&p<=1000)||!(c>=1000&&c<=9999))return;
+function addKlass(o){if(!o||typeof o.f!="string")return;if(kickedRes(kicksOf(tmsgs,parseInt(o.c,10)),o))return;const f=o.f.trim().slice(0,18),p=parseInt(o.p,10),c=parseInt(o.c,10),r=parseInt(o.r,10)||0;if(!f||!(p>=0&&p<=1000)||!(c>=1000&&c<=9999))return;
   const i=prog.klass.findIndex(x=>x.f==f&&x.c==c&&(x.r||0)==r);if(i>=0){if(prog.klass[i].p>=p)return;prog.klass[i].p=p}else prog.klass.push({f,p,c,r});prog.klass=prog.klass.slice(-400);save();showKlass()}
 function setLive(ok,txt){live=ok;const e=$("olive");e.textContent=txt;e.className=ok?"on":"off"}
 function listen(){if(es){es.close();es=null}tmsgs=[];if(pollT){clearInterval(pollT)}pollT=setInterval(()=>{if(!es||es.readyState!=1)pollKlass()},8000);const c=tcode;if(!(c>=1000&&c<=9999)){setLive(false,"");return}
@@ -320,7 +324,7 @@ function listen(){if(es){es.close();es=null}tmsgs=[];if(pollT){clearInterval(pol
 function sendScore(c,pts,r){const o={f:prog.firma||"Firma ohne Namen",p:pts,c,r:r||0};
   return send(c,o).then(ok=>ok||new Promise(res=>setTimeout(()=>send(c,o).then(res),9000)))}
 function fetchTop(c){return fetchLobby(c).then(a=>a===null?null:topFrom(a,c,null))}
-function topFrom(a,c,r){const best={};(a||[]).forEach(o=>{if(!o||typeof o.f!="string"||parseInt(o.c,10)!=c||(r!=null&&(parseInt(o.r,10)||0)!=r))return;const p=parseInt(o.p,10),f=o.f.trim().slice(0,18);if(f&&p>=0&&p<=1000&&!(best[f]>=p))best[f]=p});return Object.entries(best).map(([f,p])=>({f,p})).sort((a,b)=>b.p-a.p)}
+function topFrom(a,c,r){const best={},kk=kicksOf(a,c);(a||[]).forEach(o=>{if(!o||typeof o.f!="string"||parseInt(o.c,10)!=c||kickedRes(kk,o)||(r!=null&&(parseInt(o.r,10)||0)!=r))return;const p=parseInt(o.p,10),f=o.f.trim().slice(0,18);if(f&&p>=0&&p<=1000&&!(best[f]>=p))best[f]=p});return Object.entries(best).map(([f,p])=>({f,p})).sort((a,b)=>b.p-a.p)}
 function showClassTop(c){if(wes&&kcode==c){drawTop(c,topFrom(kmsgs,c,duel?duel.r:null));return}fetchTop(c).then(t=>drawTop(c,t))}
 function drawRank(c,t){const cr=$("crank");if(!duel||duel.code!=c||!done||!t||!t.length){cr.hidden=true;return}
   const me=t.findIndex(x=>x.f==(prog.firma||"Firma ohne Namen"));if(me<0){cr.hidden=true;return}
@@ -333,16 +337,25 @@ function drawTop(c,t){drawRank(c,t);const box=$("ctop");if(!t||!t.length){box.te
   box.innerHTML="<b>Klasse, Spiel "+c+":</b> ";t.slice(0,3).forEach((x,i)=>{const sp=document.createElement("span");sp.textContent=(i+1)+". "+x.f+" "+x.p+(i<Math.min(t.length,3)-1?" · ":"");box.appendChild(sp)});
   const me=t.findIndex(x=>x.f==(prog.firma||"Firma ohne Namen"));if(me>=0){const sp=document.createElement("span");sp.textContent=" · Euer Rang: "+(me+1)+" von "+t.length;box.appendChild(sp)}}
 let lobby={},waitT=null,wes=null;
-function showLobby(){const c=tcode,l=lobby[c]?[...lobby[c]]:[];$("olobby").textContent=c?(l.length?l.length+(l.length==1?" Firma":" Firmen")+" bereit: "+l.join(", "):"Noch keine Firma angemeldet."):""}
+let kickArm=null;
+function kickBtn(f){const b=document.createElement("button");b.type="button";b.className="kchip"+(kickArm==f?" arm":"");b.textContent=kickArm==f?"«"+f+"» rauswerfen? Nochmals klicken":f;b.title="Anklicken, um diesen Namen rauszuwerfen";
+  b.onclick=e=>{e.preventDefault();if(kickArm!=f){kickArm=f;showLobby();showKlass();setTimeout(()=>{if(kickArm==f){kickArm=null;showLobby();showKlass()}},4000);return}kickArm=null;doKick(f)};return b}
+function doKick(f){const c=tcode;if(!c)return;const o={j:f,c,n:-1};tmsgs.push({...o,t:Date.now()+tOff});prog.klass=prog.klass.filter(x=>!(x.c==c&&x.f==f));save();tApply();
+  const go=k=>send(c,o).then(ok=>{if(!ok&&k<4)setTimeout(()=>go(k+1),3000)});go(0)}
+function showLobby(){const c=tcode,l=lobby[c]?[...lobby[c]]:[],e=$("olobby");e.textContent="";if(!c)return;
+  if(!l.length){e.textContent="Noch keine Firma angemeldet.";return}
+  const h=document.createElement("span");h.textContent=l.length+(l.length==1?" Firma":" Firmen")+" bereit (Name anklicken = rauswerfen):";e.appendChild(h);const w=document.createElement("div");w.className="kchips";l.forEach(f=>w.appendChild(kickBtn(f)));e.appendChild(w)}
 let kmsgs=[],kcode=0,onT=null,played={};
 function stopWait(){if(waitT){clearTimeout(waitT);waitT=null}}
 function closeK(){stopWait();clearTimeout(onT);if(wes){try{wes.close()}catch(e){}wes=null}kmsgs=[];kcode=0}
+function kicked(code){const old=prog.firma;closeK();stopTimer();duel=null;$("crank").hidden=true;$("ctop").textContent="";prog.firma="";save();$("firma").value="";$("code").value=code;
+  card({k:"Klassenduell · Spiel "+code,t:"Name entfernt",p:"Die Lehrperson hat den Namen «"+old+"» entfernt. Wählt einen passenden Firmennamen und tretet mit derselben Spielnummer neu bei.",sm:1,a:["",null],b:["Neuen Namen wählen",()=>{pclose();const d=$("duelbox");d.open=true;d.closest(".card").scrollIntoView({behavior:"smooth",block:"start"});setTimeout(()=>{try{$("firma").focus({preventScroll:true})}catch(e){}},400)}]})}
 function waitDuel(code,n0){closeK();kcode=code;let joined=false,opened=false,man=false;const K="Klassenduell · Spiel "+code,stop=()=>{closeK();pclose()};
   const begin=(n,r)=>{stopWait();played[code]=r;beginDuel(code,n,r||0)};
   const manual=()=>{if(kcode!=code||man)return;man=true;card({k:K,t:"Bereit",p:"Keine Verbindung zum Spielserver. Wartet, bis die Lehrperson «Los» sagt, und klickt dann auf «Jetzt starten».",sm:1,a:["Abbrechen",stop],b:["Jetzt starten",()=>begin(n0,0)]})};
   card({k:K,t:"Bereit",p:"«"+prog.firma+"» ist angemeldet. Es geht los, sobald die Lehrperson die Runde startet. Alle bekommen dasselbe Netz.",sm:1,a:["Abbrechen",stop],b:["",null]});
-  const join=k=>{joined=true;send(code,{j:prog.firma,c:code}).then(ok=>{if(ok||kcode!=code)return;if(!opened)manual();else if((k||0)<3)setTimeout(()=>{if(kcode==code)join((k||0)+1)},12000)})};
-  const on=()=>{if(kcode!=code)return;const l=lastStart(kmsgs,code);if(l&&played[code]!==l.r){begin(l.n,l.r);return}if(!joined)join(0);if(done&&duel&&duel.code==code)drawTop(code,topFrom(kmsgs,code,duel.r))};
+  let jt=Infinity;const join=k=>{joined=true;send(code,{j:prog.firma,c:code}).then(ok=>{if(ok)jt=Math.min(jt,Date.now()+tOff-1500);if(ok||kcode!=code)return;if(!opened)manual();else if((k||0)<3)setTimeout(()=>{if(kcode==code)join((k||0)+1)},12000)})};
+  const on=()=>{if(kcode!=code)return;const kt=kicksOf(kmsgs,code)[(prog.firma||"").trim().slice(0,18)];if(kt!=null&&kt>jt){kicked(code);return}const l=lastStart(kmsgs,code);if(l&&played[code]!==l.r){begin(l.n,l.r);return}if(!joined)join(0);if(done&&duel&&duel.code==code)drawTop(code,topFrom(kmsgs,code,duel.r))};
   waitT=setTimeout(()=>{if(!opened)manual()},6000);
   if(typeof EventSource=="undefined"){manual();return}
   const soon=()=>{clearTimeout(onT);onT=setTimeout(on,150)};
@@ -365,7 +378,7 @@ function showKlass(){const cc=tcode,rr=curR[cc]||0,t=prog.klass.filter(x=>x.c==c
   const sum={};prog.klass.forEach(x=>{sum[x.f]=(sum[x.f]||0)+x.p});const rounds=new Set(prog.klass.map(x=>x.c+"-"+(x.r||0))).size,tot=Object.entries(sum).sort((a,b)=>b[1]-a[1]).slice(0,3);
   $("ototal").textContent=rounds>1?"Gesamtwertung über "+rounds+" Runden: "+tot.map((x,i)=>(i+1)+". "+x[0]+" "+x[1]).join(" · "):"";
   if(!t.length){const li=document.createElement("li");li.className="leer";li.textContent="Noch keine Resultate in dieser Runde.";o.appendChild(li)}
-  t.slice(0,3).forEach((x,i)=>{const li=document.createElement("li"),n=document.createElement("i"),f=document.createElement("span"),p=document.createElement("span");n.textContent=i+1;f.textContent=x.f;p.textContent=x.p;li.append(n,f,p);o.appendChild(li)});
+  t.slice(0,3).forEach((x,i)=>{const li=document.createElement("li"),n=document.createElement("i"),f=document.createElement("span"),p=document.createElement("span");n.textContent=i+1;f.textContent=x.f;f.className="kname";f.title="Anklicken, um diesen Namen rauszuwerfen";f.onclick=()=>kickBtn(x.f).onclick(new Event("click"));if(kickArm==x.f)f.textContent="«"+x.f+"» rauswerfen? Nochmals klicken";p.textContent=x.p;li.append(n,f,p);o.appendChild(li)});
   const oc=$("ocount");oc.textContent="";if(!rr)return;const L=lobby[cc]?[...lobby[cc]]:[],fin=new Set(t.map(x=>x.f)),all=Math.max(L.length,t.length),open=L.filter(f=>!fin.has(f));
   const h=document.createElement("div");h.className="cnum";const b=document.createElement("b");b.textContent=t.length+" von "+all;h.append(b," Firmen fertig");
   const bar=document.createElement("div");bar.className="cbar";const fi=document.createElement("i");fi.style.width=(all?Math.round(100*t.length/all):0)+"%";bar.appendChild(fi);oc.append(h,bar);
