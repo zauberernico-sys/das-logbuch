@@ -4,4 +4,5 @@ self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C
 self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim());});
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET'||new URL(r.url).origin!==location.origin)return;
   if(new URL(r.url).pathname.indexOf('/netzbau/')>=0)return; // Prim-Trainer liegt im Unterordner und wird immer frisch geladen
+  if(new URL(r.url).pathname.indexOf('/smarthome/')>=0)return; // Regel-Mission (M&I Smart Home) wird immer frisch geladen
   e.respondWith(caches.open(C).then(c=>c.match(r,{ignoreSearch:true}).then(hit=>{const net=fetch(r).then(res=>{if(res&&res.ok)c.put(r,res.clone());return res;}).catch(()=>hit);return hit||net;})));});

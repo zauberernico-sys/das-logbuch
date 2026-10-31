@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Regel-Mission · Smart Home Bäumlihof</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700..800&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;600;700&display=swap">
+<style>
+/* Layout: links das Haus im Schnitt (Bühne) mit der Ausgabe darunter, rechts oben die Auftragskarte, darunter Sensoren und Regel. Ein fester heller Bauplan-Look wie im Dossier, bewusst nur ein Thema. */
+:root{
+  --ink:#131A33;--paper:#F1F4FB;--grid:#D5DEF5;--card:#FFFFFF;--blue:#2447F5;--blue-ink:#1D3BD6;
+  --orange:#FF7A1A;--warn:#FFE2C7;--ok:#127A45;--ok-bg:#E2F4E9;--bad-bg:#FFF0E5;--mute:#5A6480;--off:#EEF1F8;
+  --night:#101633;--room:#FFFFFF;--room-dark:#B9C2DE;--glow:#FFE08A;
+  --display:'Bricolage Grotesque','Arial Black','Segoe UI',sans-serif;
+  --text:'Instrument Sans','Segoe UI','Helvetica Neue',Arial,sans-serif;
+  --mono:'DM Mono',Consolas,'Courier New',monospace;
+  color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background-color:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px;color:var(--ink);font-family:var(--text);font-size:17px;line-height:1.45}
+.wrap{max-width:1360px;margin:0 auto;padding-block:16px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 24px}
+h1{margin:0;font-family:var(--display);font-weight:800;font-size:clamp(28px,3.4vw,40px);line-height:1;letter-spacing:-.012em;text-wrap:balance}
+h2{margin:0;font-family:var(--display);font-weight:800;font-size:clamp(22px,2.2vw,27px);line-height:1.1;text-wrap:balance}
+.mono{font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;font-size:13px}
+.lbl{color:var(--blue-ink)}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.steps span{font-family:var(--mono);font-size:13px;border:2px solid var(--ink);background:var(--card);padding:3px 9px}
+.steps span.now{background:var(--ink);color:#fff}
+.steps span.done{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.main{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:880px){.main{grid-template-columns:minmax(0,1fr)}}
+.left,.side{display:flex;flex-direction:column;gap:20px;min-width:0}
+.stage{position:relative;border:2px solid var(--ink);background:#DCE8FF;min-width:0;transition:background .4s}
+.stage.night{background:var(--night)}
+.stage svg{display:block;width:100%;height:auto}
+.out{border-top:2px solid var(--ink);background:var(--card);padding:8px 12px 10px;display:flex;flex-direction:column;gap:6px}
+.status{display:flex;flex-wrap:wrap;gap:8px;min-height:36px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:8px;border:2px solid var(--ink);padding:3px 10px;background:var(--card);font-weight:600;font-size:15px}
+.chip.on{background:var(--ink);color:#fff}
+.chip.warn{background:var(--warn);border-style:dashed}
+.card{position:relative;background:var(--card);border:2px solid var(--ink);padding:12px 16px 14px;display:flex;flex-direction:column;gap:8px;margin-top:22px}
+.card>.mono.lbl{position:absolute;left:-2px;top:-24px}
+.mission{border-width:3px;border-color:var(--blue);gap:12px;padding:16px 18px 18px}
+.mission>.mono.lbl{top:-25px}
+.quote{border-left:4px solid var(--orange);padding:4px 0 4px 12px;font-style:italic}
+.task{font-weight:600}
+.task p,.mission p{margin:0;max-width:62ch}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.btn{font:inherit;font-weight:700;min-height:46px;padding:8px 18px;border:2px solid var(--ink);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn:hover{filter:brightness(.96)}
+.fb{border:2px solid var(--ink);padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.fb b{font-family:var(--mono);font-size:13px;letter-spacing:.05em;text-transform:uppercase}
+.fb.ok{background:var(--ok-bg);border-color:var(--ok)}
+.fb.ok b{color:var(--ok)}
+.fb.no{background:var(--bad-bg);border-color:var(--orange)}
+.fb.no b{color:#A84300}
+.eva{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:520px){.eva{grid-template-columns:minmax(0,1fr)}}
+.eva div{border:2px solid var(--ink);padding:8px 10px;background:var(--paper)}
+.eva b{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--blue-ink)}
+ul.learn{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px}
+.rules{display:flex;flex-direction:column;gap:6px;font-family:var(--mono);font-size:14.5px}
+.rules div{border:2px solid var(--ink);padding:6px 10px;background:var(--paper);overflow-wrap:anywhere}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:42px;flex-wrap:wrap}
+.row>span{font-weight:600}
+.seg{display:inline-flex;border:2px solid var(--ink)}
+.seg button{font:inherit;font-weight:600;min-width:70px;min-height:40px;padding:4px 12px;border:0;background:var(--card);color:var(--ink);cursor:pointer}
+.seg button+button{border-left:2px solid var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+input[type=range]{width:150px;accent-color:var(--ink)}
+.temp{display:flex;align-items:center;gap:10px}
+.temp output{font-family:var(--mono);min-width:58px;text-align:right}
+.rule{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 12px;align-items:center}
+.rule .k{font-family:var(--mono);font-weight:500;font-size:17px}
+select{font:inherit;font-weight:600;width:100%;min-height:44px;padding:6px 10px;border:2px solid var(--ink);background:var(--card);color:var(--ink);border-radius:0}
+select:disabled{background:var(--off);color:var(--mute);border-color:#9AA3BF;opacity:1}
+select.edit{border-color:var(--orange);box-shadow:0 0 0 3px var(--warn)}
+.verdict{font-family:var(--mono);font-size:15px;padding:9px 12px;border:2px solid var(--ink);background:var(--paper)}
+.verdict.yes{background:var(--blue);color:#fff;border-color:var(--blue)}
+.lock{font-size:14px;color:var(--mute)}
+footer{font-size:14px;color:var(--mute)}
+.ln{fill:none;stroke:var(--ink);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.room{fill:var(--room);transition:fill .35s}
+.night .room{fill:var(--room-dark)}
+.night .room.lit,.room.lit{fill:var(--glow)}
+.night .sky-ln{stroke:#E8EDFF}
+.hide{display:none}
+@media (prefers-reduced-motion:no-preference){.blink{animation:bl .7s steps(2,end) infinite}.fb{animation:pop .25s ease-out}}
+@keyframes bl{50%{opacity:.25}}
+@keyframes pop{from{transform:translateY(4px);opacity:.4}to{transform:none;opacity:1}}
+.vid{display:flex;flex-direction:column;gap:8px}
+.vid video{width:100%;max-width:100%;border:2px solid var(--ink);background:var(--night)}
+.small{font-size:14px;color:var(--mute)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+    <div class="mono lbl">Smart Home Bäumlihof · Woche 2</div>
+    <h1>Regel-Mission</h1>
+  </div>
+  <div class="steps" id="steps" aria-label="Fortschritt"></div>
+</header>
+
+<div class="main">
+  <div class="left">
+    <div class="stage" id="stage">
+      <svg viewBox="0 0 520 330" role="img" aria-labelledby="hausTitel">
+        <title id="hausTitel">Haus im Schnitt. Lampe, Heizung, Storen und Sirene reagieren auf die Regel.</title>
+        <g id="sun"><circle cx="62" cy="58" r="20" fill="#FFB020"/><path d="M62 24v-10M62 102v-10M28 58H18M106 58H96M38 34l-7-7M93 89l-7-7M38 82l-7 7M93 27l-7 7" fill="none" stroke="#FFB020" stroke-width="2.6" stroke-linecap="round"/></g>
+        <g id="moon" class="hide"><path d="M74 38a24 24 0 1 0 12 40a20 20 0 0 1-12-40z" fill="#E8EDFF"/><circle cx="30" cy="30" r="1.8" fill="#E8EDFF"/><circle cx="110" cy="96" r="1.8" fill="#E8EDFF"/><circle cx="470" cy="44" r="1.8" fill="#E8EDFF"/><circle cx="430" cy="90" r="1.5" fill="#E8EDFF"/></g>
+        <path class="room" d="M110 112V96L260 36l150 60v16z"/>
+        <rect class="room" x="110" y="112" width="140" height="92"/>
+        <rect class="room" x="250" y="112" width="160" height="92"/>
+        <rect class="room" x="110" y="204" width="120" height="92"/>
+        <rect class="room" id="rWohnen" x="230" y="204" width="180" height="92"/>
+        <path class="ln sky-ln" d="M24 296H496"/>
+        <path class="ln" d="M90 104L260 36l170 68"/>
+        <path class="ln" d="M110 96V296M410 96V296M110 112H410M110 204H410M250 112V204M230 204V296"/>
+        <path class="ln" d="M322 61V30h26v41"/>
+        <rect class="ln" x="140" y="132" width="62" height="46" fill="#DCE8FF"/>
+        <path class="ln" d="M171 132v46"/>
+        <path class="ln hide" id="winOpen" d="M202 132l22 8v38l-22 0" fill="#fff"/>
+        <g id="storen" class="hide"><rect x="140" y="132" width="62" height="46" fill="#131A33"/><path d="M140 141h62M140 150h62M140 159h62M140 168h62" stroke="#fff" stroke-width="1.6"/></g>
+        <g><rect class="ln" x="146" y="184" width="50" height="16" rx="3" id="heizBox" fill="#fff"/><path class="ln" d="M156 184v16M166 184v16M176 184v16M186 184v16"/></g>
+        <g id="waerme" class="hide"><path d="M152 178c-4-6 4-8 0-14M171 178c-4-6 4-8 0-14M190 178c-4-6 4-8 0-14" fill="none" stroke="#FF7A1A" stroke-width="2.6" stroke-linecap="round"/></g>
+        <path class="ln" d="M276 204v-36M276 186h100v18M276 178h22a6 6 0 0 1 6 6v2"/>
+        <g id="rauch" class="hide"><circle cx="350" cy="140" r="12" fill="#8C93A8"/><circle cx="366" cy="132" r="15" fill="#8C93A8"/><circle cx="384" cy="142" r="11" fill="#8C93A8"/></g>
+        <circle cx="330" cy="118" r="5" fill="#fff" class="ln"/>
+        <path class="ln" d="M128 296V242h34v54"/><circle cx="154" cy="270" r="2" fill="#131A33"/>
+        <path class="ln" d="M176 296v-18h18v-18h18v-18h18v-18"/>
+        <path class="ln" d="M330 204v16"/>
+        <path id="lampe" class="ln" d="M316 236l14-16 14 16z" fill="#fff"/>
+        <path id="strahlen" class="hide" d="M312 246l-8 12M330 250v14M348 246l8 12" fill="none" stroke="#FF7A1A" stroke-width="2.6" stroke-linecap="round"/>
+        <rect class="ln" x="346" y="262" width="54" height="14" rx="3" fill="#fff"/><rect class="ln" x="340" y="272" width="66" height="14" rx="4" fill="#fff"/><path class="ln" d="M346 286v10M400 286v10"/>
+        <g id="person" class="hide"><circle cx="270" cy="246" r="9" fill="#2447F5"/><path d="M270 256v22M270 262l-12 10M270 262l12 8M270 278l-9 18M270 278l9 18" fill="none" stroke="#2447F5" stroke-width="4" stroke-linecap="round"/></g>
+        <g><path class="ln" d="M248 66v-10a12 12 0 0 1 24 0v10z" fill="#fff" id="sirBox"/><path class="ln" d="M242 66h36"/></g>
+        <g id="alarm" class="hide blink"><path d="M236 46l-10-6M284 46l10-6M260 34V22" fill="none" stroke="#FF7A1A" stroke-width="3.2" stroke-linecap="round"/></g>
+      </svg>
+      <div class="out">
+        <div class="mono lbl">Ausgabe: die Geräte</div>
+        <div class="status" id="status" aria-live="polite"></div>
+      </div>
+    </div>
+    <footer>Smart Home Bäumlihof · Medien und Informatik. Diese Seite speichert nichts und braucht keine Anmeldung.</footer>
+  </div>
+
+  <div class="side">
+    <section class="card mission" id="mission" aria-live="polite">
+      <div class="mono lbl" id="mLabel">Einstieg</div>
+      <div id="mBody" style="display:flex;flex-direction:column;gap:12px"></div>
+    </section>
+
+    <section class="card" aria-labelledby="sTitel">
+      <div class="mono lbl" id="sTitel">Eingabe: die Sensoren</div>
+      <div class="row"><span>Bewegung im Wohnzimmer</span><div class="seg" role="group" aria-label="Bewegung"><button type="button" id="bewNein" data-k="bew" data-v="0">nein</button><button type="button" id="bewJa" data-k="bew" data-v="1">ja</button></div></div>
+      <div class="row"><span>Helligkeit draussen</span><div class="seg" role="group" aria-label="Helligkeit"><button type="button" id="hellJa" data-k="hell" data-v="1">hell</button><button type="button" id="hellNein" data-k="hell" data-v="0">dunkel</button></div></div>
+      <div class="row"><label for="temp"><span style="font-weight:600">Temperatur im Zimmer</span></label><div class="temp"><input type="range" id="temp" min="12" max="28" step="1" value="21"><output id="tempOut" for="temp">21 °C</output></div></div>
+      <div class="row"><span>Fenster</span><div class="seg" role="group" aria-label="Fenster"><button type="button" id="fenZu" data-k="fen" data-v="0">zu</button><button type="button" id="fenOffen" data-k="fen" data-v="1">offen</button></div></div>
+      <div class="row"><span>Rauch</span><div class="seg" role="group" aria-label="Rauch"><button type="button" id="rauchNein" data-k="rauch" data-v="0">nein</button><button type="button" id="rauchJa" data-k="rauch" data-v="1">ja</button></div></div>
+    </section>
+
+    <section class="card" aria-labelledby="rTitel">
+      <div class="mono lbl" id="rTitel">Verarbeitung: die Regel</div>
+      <div class="rule">
+        <label class="k" for="c1">WENN</label><select id="c1"></select>
+        <label class="k" for="c2">UND</label><select id="c2"></select>
+        <label class="k" for="act">DANN</label><select id="act"></select>
+      </div>
+      <div class="lock" id="lock"></div>
+      <div class="verdict" id="verdict" aria-live="polite"></div>
+    </section>
+  </div>
+</div>
+</div>
+
+<script>
+(function(){
+  var S={bew:0,hell:1,temp:21,fen:0,rauch:0};
+  var R={c1:'bew',c2:'',act:'licht'};
+  var CONDS=[['bew','Bewegung',function(){return S.bew}],['nbew','keine Bewegung',function(){return !S.bew}],['dunkel','dunkel',function(){return !S.hell}],['hell','hell',function(){return !!S.hell}],['kalt','Temperatur < 20 °C',function(){return S.temp<20}],['warm','Temperatur > 24 °C',function(){return S.temp>24}],['fzu','Fenster zu',function(){return !S.fen}],['foffen','Fenster offen',function(){return !!S.fen}],['rauch','Rauch',function(){return !!S.rauch}]];
+  var ACTS=[['licht','Licht an'],['heiz','Heizung an'],['storen','Storen runter'],['sirene','Sirene an']];
+  var $=function(id){return document.getElementById(id)};
+  var hasVideo=false;
+  var step=0, edit=[], tries=[0,0,0,0,0], solved=[false,false,false,false,false], built=[];
+  function cond(k){for(var i=0;i<CONDS.length;i++)if(CONDS[i][0]===k)return CONDS[i];return null}
+  function cname(k){var c=cond(k);return c?c[1]:''}
+  function aname(k){return ACTS.filter(function(x){return x[0]===k})[0][1]}
+  function ruleText(){return 'WENN '+cname(R.c1)+(R.c2?' UND '+cname(R.c2):'')+' DANN '+aname(R.act)}
+  function fill(sel,list,empty){sel.innerHTML='';if(empty){var o=document.createElement('option');o.value='';o.textContent='(keine zweite Bedingung)';sel.appendChild(o)}list.forEach(function(c){var o=document.createElement('option');o.value=c[0];o.textContent=c[1];sel.appendChild(o)})}
+  function show(id,on){$(id).classList.toggle('hide',!on)}
+  function fires(){var a=cond(R.c1),b=R.c2?cond(R.c2):null;return !!a[2]()&&(!b||!!b[2]())}
+
+  function render(){
+    document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-pressed',String(S[b.dataset.k]==+b.dataset.v))});
+    $('temp').value=S.temp;$('tempOut').textContent=S.temp+' °C';
+    ['c1','c2','act'].forEach(function(id){var s=$(id);s.value=R[id];var on=edit.indexOf(id)>=0;s.disabled=!on;s.classList.toggle('edit',on&&step>0&&step<5)});
+    $('lock').textContent=step===5&&!edit.length?'':edit.length===3?'Du kannst die ganze Regel ändern.':edit.length?'Grau = vorgegeben. Ändern kannst du das orange Feld.':'Die Regel ist in diesem Auftrag vorgegeben.';
+    var ok=fires();
+    var on={licht:ok&&R.act==='licht',heiz:ok&&R.act==='heiz',storen:ok&&R.act==='storen',sirene:ok&&R.act==='sirene'};
+    $('stage').classList.toggle('night',!S.hell);
+    show('sun',S.hell);show('moon',!S.hell);show('person',S.bew);show('rauch',S.rauch);show('winOpen',S.fen);
+    show('strahlen',on.licht);$('lampe').setAttribute('fill',on.licht?'#FFB020':'#fff');$('rWohnen').classList.toggle('lit',on.licht);
+    show('waerme',on.heiz);$('heizBox').setAttribute('fill',on.heiz?'#FF7A1A':'#fff');
+    show('storen',on.storen);show('alarm',on.sirene);$('sirBox').setAttribute('fill',on.sirene?'#FF7A1A':'#fff');
+    var v=$('verdict');v.classList.toggle('yes',ok);v.textContent=(ok?'Regel erfüllt: ':'Regel nicht erfüllt: ')+ruleText();
+    var chips=[['Licht '+(on.licht?'an':'aus'),on.licht],['Heizung '+(on.heiz?'an':'aus'),on.heiz],['Storen '+(on.storen?'unten':'oben'),on.storen],['Sirene '+(on.sirene?'an':'aus'),on.sirene]];
+    var warn=[];
+    if(on.licht&&S.hell)warn.push('Das Licht brennt, obwohl es hell ist.');
+    if(on.heiz&&S.fen)warn.push('Die Heizung läuft bei offenem Fenster.');
+    if(R.act==='sirene'&&S.rauch&&!on.sirene)warn.push('Es raucht, aber keine Sirene warnt.');
+    if(on.sirene&&!S.rauch)warn.push('Die Sirene heult ohne Rauch.');
+    var st=$('status');st.innerHTML='';
+    chips.forEach(function(c){var d=document.createElement('span');d.className='chip'+(c[1]?' on':'');d.textContent=c[0];st.appendChild(d)});
+    warn.forEach(function(w){var d=document.createElement('span');d.className='chip warn';d.textContent=w;st.appendChild(d)});
+    var stp=$('steps');stp.innerHTML='';
+    ['Start','1','2','3','4','Ziel'].forEach(function(t,i){var s=document.createElement('span');s.textContent=i===0||i===5?t:'Auftrag '+t;if(i===step)s.className='now';else if(i<step)s.className='done';stp.appendChild(s)});
+  }
+
+  // Aufträge
+  var M=[
+    {lab:'Einstieg',title:'Ein Haus, das mitdenkt',
+     html:'<p>Bevor ihr euren eigenen Bauplan zeichnet, trainierst du an einem Testhaus. Kundinnen und Kunden melden Probleme mit ihren Regeln. Du löst vier Aufträge, allein, etwa sechs Minuten.</p><div class="eva"><div><b>Eingabe</b>Sensoren merken etwas: Bewegung, Helligkeit, Temperatur.</div><div><b>Verarbeitung</b>Eine Regel entscheidet: WENN … DANN …</div><div><b>Ausgabe</b>Ein Gerät tut etwas: Licht, Heizung, Sirene.</div></div><p>Rechts stellst du die Sensoren ein, links siehst du, was im Haus passiert.</p>',
+     start:'Mission starten'},
+    {lab:'Auftrag 1 von 4',title:'Finde den Fehler',
+     quote:'«Bei uns brennt manchmal das Licht im Wohnzimmer, obwohl man es gar nicht braucht.»',
+     task:'Die Regel lautet: WENN Bewegung DANN Licht an. Stelle die Sensoren so ein, dass das Licht unnötig brennt. Dann klicke auf «Prüfen».',
+     setup:function(){S={bew:0,hell:1,temp:21,fen:0,rauch:0};R={c1:'bew',c2:'',act:'licht'};edit=[]},
+     check:function(){
+       if(!fires())return [false,S.bew?'Das Licht ist aus, weil die Regel nicht erfüllt ist.':'Das Licht ist aus. Die Regel reagiert nur auf Bewegung: Schalte zuerst «Bewegung» auf ja.'];
+       if(!S.hell)return [false,'Das Licht brennt, aber es ist dunkel. Dann ist Licht sinnvoll. Wann wäre es unnötig?'];
+       return [true,'Genau: Am hellen Tag geht das Licht trotzdem an, sobald sich jemand bewegt. Die Regel kennt nur eine Eingabe. Ihr fehlt die Information, ob es draussen hell ist.'];
+     }},
+    {lab:'Auftrag 2 von 4',title:'Repariere die Regel',
+     quote:'«Können Sie das bitte so einstellen, dass das Licht nur angeht, wenn man es braucht?»',
+     task:'Wähle im orangen Feld eine zweite Bedingung. Teste danach mit den Sensoren und klicke auf «Prüfen».',
+     setup:function(){R={c1:'bew',c2:'',act:'licht'};edit=['c2']},
+     check:function(){
+       var c=R.c2;
+       if(c==='dunkel')return [true,'Richtig: WENN Bewegung UND dunkel DANN Licht an. Mit UND müssen beide Bedingungen gleichzeitig stimmen. Eine zweite Eingabe macht die Regel genauer.'];
+       if(c==='')return [false,'Die Regel hat noch keine zweite Bedingung. Was muss zusätzlich stimmen, damit Licht sinnvoll ist?'];
+       if(c==='hell')return [false,'Jetzt geht das Licht nur am Tag an, also genau dann, wenn man es nicht braucht. Teste es: Schalte auf dunkel.'];
+       if(c==='bew')return [false,'Bewegung steht schon in der Regel. Die zweite Bedingung muss eine neue Eingabe prüfen.'];
+       if(c==='nbew')return [false,'Bewegung UND keine Bewegung kann nie gleichzeitig stimmen. Das Licht geht so nie mehr an.'];
+       return [false,'«'+cname(c)+'» hat mit Licht wenig zu tun. Überlege: In welcher Situation braucht man im Wohnzimmer Licht?'];
+     }},
+    {lab:'Auftrag 3 von 4',title:'Heizen zum Fenster hinaus',
+     quote:'«Ich lüfte jeden Morgen zehn Minuten. Unsere Heizung heizt dann voll zum offenen Fenster hinaus.»',
+     task:'Öffne das Fenster und beobachte die Heizung. Repariere die Regel dann mit einer zweiten Bedingung und klicke auf «Prüfen».',
+     setup:function(){S={bew:0,hell:1,temp:17,fen:0,rauch:0};R={c1:'kalt',c2:'',act:'heiz'};edit=['c2']},
+     check:function(){
+       var c=R.c2;
+       if(c==='fzu')return [true,'Richtig: WENN Temperatur < 20 °C UND Fenster zu DANN Heizung an. Ein Fensterkontakt als zweiter Sensor spart Energie. Genau so arbeiten echte Smart Homes.'];
+       if(c==='')return [false,'Noch keine zweite Bedingung. Öffne das Fenster: Die Heizung läuft weiter. Welche Information fehlt der Regel?'];
+       if(c==='foffen')return [false,'Jetzt heizt sie nur noch bei offenem Fenster. Das ist genau verkehrt.'];
+       if(c==='kalt')return [false,'Die Temperatur steht schon in der Regel. Die zweite Bedingung muss eine neue Eingabe prüfen.'];
+       if(c==='warm')return [false,'Unter 20 °C UND über 24 °C geht nie gleichzeitig. So heizt die Heizung nie mehr.'];
+       return [false,'«'+cname(c)+'» löst das Problem der Kundin nicht. Es geht um das Lüften.'];
+     }},
+    {lab:'Auftrag 4 von 4',title:'Der Rauchmelder',
+     quote:'«Wir möchten, dass das Haus bei Feuer sofort warnt.»',
+     task:'Jetzt baust du die ganze Regel selbst. Überlege gut: Braucht es hier eine zweite Bedingung? Teste mit dem Sensor «Rauch» und klicke auf «Prüfen».',
+     setup:function(){S={bew:0,hell:1,temp:21,fen:0,rauch:0};R={c1:'bew',c2:'',act:'licht'};edit=['c1','c2','act']},
+     check:function(){
+       var cs=[R.c1,R.c2].filter(Boolean);
+       if(cs.indexOf('rauch')<0)return [false,'Welcher Sensor merkt, dass es brennt? Er muss in der Regel vorkommen.'];
+       if(R.act!=='sirene')return [false,'Die Regel erkennt Rauch. Aber welches Gerät warnt die Menschen im Haus?'];
+       var extra=cs.filter(function(c){return c!=='rauch'});
+       if(extra.length)return [false,'Gefährlich: Was passiert, wenn es raucht, aber «'+cname(extra[0])+'» gerade nicht stimmt? Dann bleibt die Sirene still. Teste es aus.'];
+       return [true,'Richtig: WENN Rauch DANN Sirene an. Hier ist eine zweite Bedingung falsch, denn jede zusätzliche Bedingung könnte die Warnung verhindern. Bei Sicherheit gilt: so einfach wie möglich.'];
+     }}
+  ];
+
+  function fbBox(ok,txt){return '<div class="fb '+(ok?'ok':'no')+'"><b>'+(ok?'Gelöst':'Noch nicht')+'</b><span>'+txt+'</span></div>'}
+
+  function drawMission(fb){
+    var b=$('mBody');
+    if(step===0){
+      $('mLabel').textContent=M[0].lab;
+      b.innerHTML='<h2>'+M[0].title+'</h2>'+M[0].html+(hasVideo?'<div class="vid"><p class="small">Kopfhörer einstecken. Zuerst das Video (50 Sekunden), dann die Mission.</p><video id="film" src="erklaervideo.mp4" controls playsinline preload="metadata"></video></div>':'')+'<div class="btns"><button type="button" class="btn primary" id="go">'+M[0].start+'</button></div>';
+      $('go').onclick=function(){var f=$('film');if(f)f.pause();goto(1)};return;
+    }
+    if(step===5){
+      $('mLabel').textContent='Mission erfüllt';
+      var total=tries.slice(1).reduce(function(a,x){return a+x},0);
+      b.innerHTML='<h2>Alle vier Kunden sind zufrieden</h2>'
+        +'<p>Deine reparierten und neuen Regeln:</p><div class="rules">'+built.slice(1).map(function(t){return '<div>'+t+'</div>'}).join('')+'</div>'
+        +'<p style="font-weight:600">Das hast du gelernt</p><ul class="learn">'
+        +'<li>Ein Smart Home arbeitet nach dem EVA-Prinzip: Sensoren liefern die Eingabe, eine Regel verarbeitet sie, ein Gerät führt die Ausgabe aus.</li>'
+        +'<li>Eine Regel mit nur einer Bedingung macht oft Unsinn. Mit UND prüft sie eine zweite Eingabe und wird genauer.</li>'
+        +'<li>Mehr Bedingungen sind nicht immer besser: Bei Sicherheit muss die Warnung immer kommen.</li></ul>'
+        +'<p class="lock">'+(total===0?'Alles beim ersten Versuch gelöst.':'Nicht gelöste Versuche unterwegs: '+total+'. Jeder davon hat dir etwas über die Regel gezeigt.')+'</p>'
+        +'<div class="fb ok"><b>Jetzt seid ihr dran</b><span>Dossier Seite 6, «Der Bauplan»: Schreibt drei Regeln für euer eigenes Haus. Mindestens eine braucht ein UND. Prüft jede Regel wie hier: Wann macht sie Unsinn?</span></div>'
+        +'<div class="btns"><button type="button" class="btn primary" id="free">Frei ausprobieren</button><button type="button" class="btn" id="again">Nochmals von vorne</button></div>';
+      $('free').onclick=function(){edit=['c1','c2','act'];$('mLabel').textContent='Frei ausprobieren';b.innerHTML='<h2>Frei ausprobieren</h2><p>Baue eigene Regeln, zum Beispiel für die Storen. Wann macht deine Regel Unsinn?</p><div class="btns"><button type="button" class="btn" id="again2">Mission nochmals starten</button></div>';$('again2').onclick=restart;render()};
+      $('again').onclick=restart;return;
+    }
+    var m=M[step];
+    $('mLabel').textContent=m.lab;
+    b.innerHTML='<h2>'+m.title+'</h2><div class="quote">'+m.quote+'</div><div class="task"><p>'+m.task+'</p></div>'
+      +(fb||'')
+      +'<div class="btns">'+(solved[step]?'<button type="button" class="btn primary" id="next">'+(step===4?'Zum Abschluss':'Weiter zu Auftrag '+(step+1))+'</button>':'<button type="button" class="btn primary" id="chk">Prüfen</button>')+'</div>';
+    if(solved[step])$('next').onclick=function(){goto(step+1)};
+    else $('chk').onclick=function(){
+      var r=m.check();
+      if(r[0]){solved[step]=true;built[step-1]=ruleText()}else tries[step]++;
+      drawMission(fbBox(r[0],r[1]));
+      var f=b.querySelector('.fb');if(f&&f.scrollIntoView&&window.innerWidth<880)f.scrollIntoView({block:'nearest'});
+    };
+  }
+  function goto(n){step=n;if(n>=1&&n<=4)M[n].setup();if(n===5)edit=[];render();drawMission();var t=$('mission');if(t.scrollIntoView&&window.innerWidth<880)t.scrollIntoView({block:'start'})}
+  function restart(){tries=[0,0,0,0,0];solved=[false,false,false,false,false];built=[];S={bew:0,hell:1,temp:21,fen:0,rauch:0};R={c1:'bew',c2:'',act:'licht'};edit=[];goto(0)}
+
+  fill($('c1'),CONDS,false);fill($('c2'),CONDS,true);fill($('act'),ACTS,false);
+  document.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){S[b.dataset.k]=+b.dataset.v;render()})});
+  $('temp').addEventListener('input',function(e){S.temp=+e.target.value;render()});
+  ['c1','c2','act'].forEach(function(id){$(id).addEventListener('change',function(e){R[id]=e.target.value;render()})});
+  render();drawMission();
+  fetch('erklaervideo.mp4',{method:'HEAD',cache:'no-store'}).then(function(res){if(res.ok){hasVideo=true;if(step===0)drawMission()}}).catch(function(){});
+})();
+</script>
+</body>
+</html>
