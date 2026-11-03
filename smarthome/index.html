@@ -143,7 +143,7 @@ footer{font-size:14px;color:var(--mute)}
         <g id="alarm" class="hide blink"><path d="M236 46l-10-6M284 46l10-6M260 34V22" fill="none" stroke="#FF7A1A" stroke-width="3.2" stroke-linecap="round"/></g>
       </svg>
       <div class="out">
-        <div class="mono lbl">Ausgabe: die Geräte</div>
+        <div class="mono lbl">Ausgabe: die Aktoren</div>
         <div class="status" id="status" aria-live="polite"></div>
       </div>
     </div>
@@ -225,7 +225,7 @@ footer{font-size:14px;color:var(--mute)}
   // Aufträge
   var M=[
     {lab:'Einstieg',title:'Ein Haus, das mitdenkt',
-     html:'<p>Bevor ihr euren eigenen Bauplan zeichnet, trainierst du an einem Testhaus. Kundinnen und Kunden melden Probleme mit ihren Regeln. Du löst vier Aufträge, allein, etwa sechs Minuten.</p><div class="eva"><div><b>Eingabe</b>Sensoren merken etwas: Bewegung, Helligkeit, Temperatur.</div><div><b>Verarbeitung</b>Eine Regel entscheidet: WENN … DANN …</div><div><b>Ausgabe</b>Ein Gerät tut etwas: Licht, Heizung, Sirene.</div></div><p>Rechts stellst du die Sensoren ein, links siehst du, was im Haus passiert.</p>',
+     html:'<p>Bevor ihr euren eigenen Bauplan zeichnet, trainierst du an einem Testhaus. Kundinnen und Kunden melden Probleme mit ihren Regeln. Du löst vier Aufträge, allein, etwa acht Minuten.</p><div class="eva"><div><b>Eingabe</b>Sensoren merken etwas: Bewegung, Helligkeit, Temperatur.</div><div><b>Verarbeitung</b>Eine Regel entscheidet: WENN … DANN …</div><div><b>Ausgabe</b>Ein Aktor tut etwas: Licht, Heizung, Sirene.</div></div><p>Rechts stellst du die Sensoren ein, links siehst du, was im Haus passiert.</p>',
      start:'Mission starten'},
     {lab:'Auftrag 1 von 4',title:'Finde den Fehler',
      quote:'«Bei uns brennt manchmal das Licht im Wohnzimmer, obwohl man es gar nicht braucht.»',
@@ -269,7 +269,7 @@ footer{font-size:14px;color:var(--mute)}
      check:function(){
        var cs=[R.c1,R.c2].filter(Boolean);
        if(cs.indexOf('rauch')<0)return [false,'Welcher Sensor merkt, dass es brennt? Er muss in der Regel vorkommen.'];
-       if(R.act!=='sirene')return [false,'Die Regel erkennt Rauch. Aber welches Gerät warnt die Menschen im Haus?'];
+       if(R.act!=='sirene')return [false,'Die Regel erkennt Rauch. Aber welcher Aktor warnt die Menschen im Haus?'];
        var extra=cs.filter(function(c){return c!=='rauch'});
        if(extra.length)return [false,'Gefährlich: Was passiert, wenn es raucht, aber «'+cname(extra[0])+'» gerade nicht stimmt? Dann bleibt die Sirene still. Teste es aus.'];
        return [true,'Richtig: WENN Rauch DANN Sirene an. Hier ist eine zweite Bedingung falsch, denn jede zusätzliche Bedingung könnte die Warnung verhindern. Bei Sicherheit gilt: so einfach wie möglich.'];
@@ -291,7 +291,7 @@ footer{font-size:14px;color:var(--mute)}
       b.innerHTML='<h2>Alle vier Kunden sind zufrieden</h2>'
         +'<p>Deine reparierten und neuen Regeln:</p><div class="rules">'+built.slice(1).map(function(t){return '<div>'+t+'</div>'}).join('')+'</div>'
         +'<p style="font-weight:600">Das hast du gelernt</p><ul class="learn">'
-        +'<li>Ein Smart Home arbeitet nach dem EVA-Prinzip: Sensoren liefern die Eingabe, eine Regel verarbeitet sie, ein Gerät führt die Ausgabe aus.</li>'
+        +'<li>Ein Smart Home arbeitet nach dem EVA-Prinzip: Sensoren liefern die Eingabe, eine Regel verarbeitet sie, ein Aktor führt die Ausgabe aus.</li>'
         +'<li>Eine Regel mit nur einer Bedingung macht oft Unsinn. Mit UND prüft sie eine zweite Eingabe und wird genauer.</li>'
         +'<li>Mehr Bedingungen sind nicht immer besser: Bei Sicherheit muss die Warnung immer kommen.</li></ul>'
         +'<p class="lock">'+(total===0?'Alles beim ersten Versuch gelöst.':'Nicht gelöste Versuche unterwegs: '+total+'. Jeder davon hat dir etwas über die Regel gezeigt.')+'</p>'
