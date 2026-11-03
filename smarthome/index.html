@@ -282,7 +282,7 @@ footer{font-size:14px;color:var(--mute)}
     var b=$('mBody');
     if(step===0){
       $('mLabel').textContent=M[0].lab;
-      b.innerHTML='<h2>'+M[0].title+'</h2>'+M[0].html+(hasVideo?'<div class="vid"><p class="small">Kopfhörer einstecken. Zuerst das Video (50 Sekunden), dann die Mission.</p><video id="film" src="erklaervideo.mp4" controls playsinline preload="metadata"></video></div>':'')+'<div class="btns"><button type="button" class="btn primary" id="go">'+M[0].start+'</button></div>';
+      b.innerHTML='<h2>'+M[0].title+'</h2>'+M[0].html+(hasVideo?'<div class="vid"><p class="small">Kopfhörer einstecken. Zuerst das Video (zwei Minuten), dann die Mission.</p><video id="film" src="erklaervideo.mp4" controls playsinline preload="metadata"></video></div>':'')+'<div class="btns"><button type="button" class="btn primary" id="go">'+M[0].start+'</button></div>';
       $('go').onclick=function(){var f=$('film');if(f)f.pause();goto(1)};return;
     }
     if(step===5){
